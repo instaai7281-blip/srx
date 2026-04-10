@@ -47,15 +47,16 @@ app = Client(
 
 pro = Client("ggbot", api_id=API_ID, api_hash=API_HASH, session_string=STRING)
 
-# Safety check for pyromod listeners to prevent KeyError
+# Safely initialize pyromod listeners to definitively prevent KeyError
+from collections import defaultdict
 from pyromod.listen.client import ListenerTypes
 for client in [app, pro]:
-    if not hasattr(client, 'listeners'):
-        client.listeners = {lt: {} for lt in ListenerTypes}
-    else:
-        for lt in ListenerTypes:
-            if lt not in client.listeners:
-                client.listeners[lt] = {}
+    # Use defaultdict so that any missing listener type returns an empty dict instead of crashing
+    client.listeners = defaultdict(dict)
+    # Pre-populate with known types just in case
+    for lt in ListenerTypes:
+        client.listeners[lt] = {}
+
 
 sex = TelegramClient('sexrepo', API_ID, API_HASH).start(bot_token=BOT_TOKEN)
 

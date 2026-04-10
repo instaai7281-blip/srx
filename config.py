@@ -1,0 +1,28 @@
+# devgagan
+# Note if you are trying to deploy on vps then directly fill values in ("")
+
+from os import getenv
+
+# VPS --- FILL COOKIES 🍪 in """ ... """ 
+
+INST_COOKIES = """
+# wtite up here insta cookies
+"""
+YTUB_COOKIES = """
+# Netscape HTTP Cookie File # https://curl.haxx.se/rfc/cookie_spec.html # This is a generated file! Do not edit. .youtube.com TRUE / TRUE 1769075815 __Secure-ROLLOUT_TOKEN CMncsJvNztHJaBCmoIHEl9COAxjWyo6hodqOAw%3D%3D .youtube.com TRUE / TRUE 1769075897 VISITOR_INFO1_LIVE akhd9i_2swE .youtube.com TRUE / TRUE 1769075897 VISITOR_PRIVACY_METADATA CgJJThIEGgAgIA%3D%3D .youtube.com TRUE / TRUE 1788083897 PREF f6=40000000&tz=Asia.Kolkata .youtube.com TRUE / TRUE 1753525615 GPS 1 .youtube.com TRUE / TRUE 0 YSC n7xEEL2JaYo .youtube.com TRUE / TRUE 1785059896 __Secure-1PSIDTS sidts-CjEB5H03P64nzFFrdbMR6sN9Pq5-fW4Mz67aru9MI74upsMjxpHgCusTH3FTFgY6UE9zEAA .youtube.com TRUE / TRUE 1785059896 __Secure-3PSIDTS sidts-CjEB5H03P64nzFFrdbMR6sN9Pq5-fW4Mz67aru9MI74upsMjxpHgCusTH3FTFgY6UE9zEAA .youtube.com TRUE / FALSE 1788083896 HSID AKwsdl0fwWhBnTZ7M .youtube.com TRUE / TRUE 1788083896 SSID ARcTW3G0nFTZR_lWO .youtube.com TRUE / FALSE 1788083896 APISID ZUEXdL-vU7hRzos0/AVGKjatlustKf2WIm .youtube.com TRUE / TRUE 1788083896 SAPISID n2kLKH_m3RewYQ0l/AU4WmEOtYN-zTQj77 .youtube.com TRUE / TRUE 1788083896 __Secure-1PAPISID n2kLKH_m3RewYQ0l/AU4WmEOtYN-zTQj77 .youtube.com TRUE / TRUE 1788083896 __Secure-3PAPISID n2kLKH_m3RewYQ0l/AU4WmEOtYN-zTQj77 .youtube.com TRUE / FALSE 1788083896 SID g.a000zgj03rbFewDmuOKelWMxLDCaaXYNC-yE1m0hKMttU7hPpKBU-PFwYoCUh-HmnGLtgLrN6QACgYKARcSARISFQHGX2MiM-fnSlfVx6BNe48HgdJIWRoVAUF8yKo0WN1ike4ThaJz6YN-dBIq0076 .youtube.com TRUE / TRUE 1788083896 __Secure-1PSID g.a000zgj03rbFewDmuOKelWMxLDCaaXYNC-yE1m0hKMttU7hPpKBUXsuT9GoLNUDwGhlZ5KIl5AACgYKAR8SARISFQHGX2MiwvAs-Fyxqv3CUeQoj6g6choVAUF8yKruik0NY92s9lUT3JavXwM_0076 .youtube.com TRUE / TRUE 1788083896 __Secure-3PSID g.a000zgj03rbFewDmuOKelWMxLDCaaXYNC-yE1m0hKMttU7hPpKBUwJuQAt_fx2jyFYteF6PccQACgYKATMSARISFQHGX2MiLWkof1JjaTwqQZtmbAGm4xoVAUF8yKrpbCGDn0I6c3hknofE1sBN0076 .youtube.com TRUE / FALSE 1785059900 SIDCC AKEyXzX6iObyshSfm4gRfyQwl2Gd78t9tNfNfrYhaJxUdarV-4YhqhaZ1aYlirJuTDFYkEWd .youtube.com TRUE / TRUE 1785059900 __Secure-1PSIDCC AKEyXzUdIdowBTWbl1rL0qVYTb1QBwlzU4pRx7ef4CbCQRlZPA9jumPqvm_aEBBNO9RDRoFI .youtube.com TRUE / TRUE 1785059900 __Secure-3PSIDCC AKEyXzXX4TcI5KsfnBOCJAtedAW-8-eFChGscH8MIkfM08otAV1T2sjRW8yiQgbczDSqOx-GUg .youtube.com TRUE / TRUE 1788083897 LOGIN_INFO AFmmF2swRAIgO3OXqyQX3iMZVWwgIYzt8QtkG69RhWQI4eN6uacTYWkCIAyETESa0i0lJpH839D08XJnCHsH13dhWkoQQuiGOt7q:QUQ3MjNmeUxLTW9JWVRtMzl1NzRrWjF1X1hFR0Qwd3d5N2REdVhQaW9RUjVpaUFxaXNVOU54bUZFbExUUWZGQmMtYlNpeEJLd25LSmJISENkZmt1QzVIN3FsVjRaRjdBR011OW9ZSTlZdW1YbHBTblJUZVBKbVN1TFBaNkRjdnJBbFMwcGtFdDlSaDl4YTB4eXJ6bXNlVHhLZy1tZ3BPM05B .youtube.com TRUE / FALSE 1753523916 ST-1m14vnv csn=Ix0_RDa1anJNAuVs&itct=CHIQ_FoiEwja1IjIodqOAxUwb_UFHVfEJMgyCmctaGlnaC1yZWNaD0ZFd2hhdF90b193YXRjaJoBBhCOHhieAQ%3D%3D
+"""
+
+API_ID = int(getenv("API_ID", "27317669"))
+API_HASH = getenv("API_HASH", "11b88c331c5d44fde57cf91de1a2156b")
+BOT_TOKEN = getenv("BOT_TOKEN", "8415514217:AAFgSxR_RPuzge7J7tXYDFrmIFalRUeFTB8")
+OWNER_ID = list(map(int, getenv("OWNER_ID", "6947378236").split()))
+MONGO_DB = getenv("MONGO_DB", "mongodb+srv://beanonymoushacker09:q9gxQwIZDCmVOycI@cluster0.ej0gk.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0")
+LOG_GROUP = getenv("LOG_GROUP", "-1002896498332")
+CHANNEL_ID = int(getenv("CHANNEL_ID", "-1002267643770"))
+FREEMIUM_LIMIT = int(getenv("FREEMIUM_LIMIT", "100"))
+PREMIUM_LIMIT = int(getenv("PREMIUM_LIMIT", "5000"))
+WEBSITE_URL = getenv("WEBSITE_URL", "upshrink.com")
+AD_API = getenv("AD_API", "52b4a2cf4687d81e7d3f8f2b7bc2943f618e78cb")
+STRING = getenv("STRING", None)
+YT_COOKIES = getenv("YT_COOKIES", YTUB_COOKIES)
+INSTA_COOKIES = getenv("INSTA_COOKIES", INST_COOKIES)

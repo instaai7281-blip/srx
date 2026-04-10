@@ -35,7 +35,8 @@ env.bak/
 venv.bak/
 
 # Project configuration
-config.py
+# config.py
+
 sessions/
 *.session
 *.session-journal
