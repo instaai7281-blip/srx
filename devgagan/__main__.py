@@ -2,7 +2,7 @@
 # File Name: __main__.py
 # Description: A Pyrogram bot for downloading files from Telegram channels or groups 
 #              and uploading them back to Telegram.
-# Author: Gagan
+# Author: ❉ Sᴛꪮʟᴇɴ Hᴀᴘᴘɪɴᴇss
 # GitHub: https://github.com/devgaganin/
 # Telegram: https://t.me/team_spy_pro
 # YouTube: https://youtube.com/@dev_gagan
@@ -18,6 +18,7 @@ import gc
 from pyrogram import idle
 from devgagan.modules import ALL_MODULES
 from devgagan.core.mongo.plans_db import check_and_remove_expired_users
+from devgagan import restrict_bot
 from aiojobs import create_scheduler
 
 # ----------------------------Bot-Start---------------------------- #
@@ -37,21 +38,22 @@ async def schedule_expiry_check():
         gc.collect()
 
 async def devggn_boot():
+    await restrict_bot()
     for all_module in ALL_MODULES:
         importlib.import_module("devgagan.modules." + all_module)
     print("""
 ---------------------------------------------------
-📂 Bot Deployed successfully ...
-📝 Description: A Pyrogram bot for downloading files from Telegram channels or groups 
+Bot Deployed successfully ...
+Description: A Pyrogram bot for downloading files from Telegram channels or groups 
                 and uploading them back to Telegram.
-👨‍💻 Author: Gagan
-🌐 GitHub: https://github.com/devgaganin/
-📬 Telegram: https://t.me/team_spy_pro
-▶️ YouTube: https://youtube.com/@dev_gagan
-🗓️ Created: 2025-01-11
-🔄 Last Modified: 2025-01-11
-🛠️ Version: 2.0.5
-📜 License: MIT License
+Author: ❉ Sᴛꪮʟᴇɴ Hᴀᴘᴘɪɴᴇss
+GitHub: https://github.com/devgaganin/
+Telegram: https://t.me/team_spy_pro
+YouTube: https://youtube.com/@dev_gagan
+Created: 2025-01-11
+Last Modified: 2025-01-11
+Version: 2.0.5
+License: MIT License
 ---------------------------------------------------
 """)
 

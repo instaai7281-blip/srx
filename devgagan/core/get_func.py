@@ -930,12 +930,20 @@ async def send_settings_message(chat_id, user_id):
         [Button.url("💞 Contact Owner 🦋", "https://t.me/Chosen_Onex_bo")]
     ]
     
-    await gf.send_file(
-        chat_id,
-        file=SET_PIC,
-        caption=MESS,
-        buttons=buttons
-    )
+    if os.path.exists(SET_PIC):
+        await gf.send_file(
+            chat_id,
+            file=SET_PIC,
+            caption=MESS,
+            buttons=buttons
+        )
+    else:
+        await gf.send_message(
+            chat_id,
+            MESS,
+            buttons=buttons
+        )
+
 
 
 pending_photos = {}

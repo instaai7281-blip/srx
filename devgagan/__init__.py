@@ -2,7 +2,7 @@
 # File Name: __init__.py
 # Description: A Pyrogram bot for downloading files from Telegram channels or groups 
 #              and uploading them back to Telegram.
-# Author: Gagan
+# Author: ❉ Sᴛꪮʟᴇɴ Hᴀᴘᴘɪɴᴇss
 # GitHub: https://github.com/devgaganin/
 # Telegram: https://t.me/team_spy_pro
 # YouTube: https://youtube.com/@dev_gagan
@@ -21,8 +21,8 @@ except RuntimeError:
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
 
-from pyrogram import Client
 import pyromod
+from pyrogram import Client
 from pyrogram.enums import ParseMode 
 from config import API_ID, API_HASH, BOT_TOKEN, STRING, MONGO_DB, OWNER_ID
 from telethon.sync import TelegramClient
@@ -47,7 +47,18 @@ app = Client(
 
 pro = Client("ggbot", api_id=API_ID, api_hash=API_HASH, session_string=STRING)
 
+# Safety check for pyromod listeners to prevent KeyError
+from pyromod.listen.client import ListenerTypes
+for client in [app, pro]:
+    if not hasattr(client, 'listeners'):
+        client.listeners = {lt: {} for lt in ListenerTypes}
+    else:
+        for lt in ListenerTypes:
+            if lt not in client.listeners:
+                client.listeners[lt] = {}
+
 sex = TelegramClient('sexrepo', API_ID, API_HASH).start(bot_token=BOT_TOKEN)
+
 
 
 # MongoDB setup
@@ -86,4 +97,4 @@ async def restrict_bot():
         except Exception as e:
             logging.error(f"Failed to send message to owner {owner}: {e}")
 
-loop.run_until_complete(restrict_bot())
+# loop.run_until_complete(restrict_bot())
