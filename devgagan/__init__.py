@@ -47,9 +47,20 @@ app = Client(
 
 pro = Client("ggbot", api_id=API_ID, api_hash=API_HASH, session_string=STRING)
 
-# Reverting to standard pyromod initialization to fix RecursionError
+# Safe listener initialization using defaultdict to prevent KeyError
 import pyromod
-from pyrogram import Client
+from collections import defaultdict
+from pyromod.listen.client import ListenerTypes
+
+for client in [app, pro]:
+    if client:
+        # We pre-initialize listeners as a defaultdict of dicts
+        # This ensures client.listeners[type] always returns a dict instead of KeyError
+        client.listeners = defaultdict(dict)
+        # Pre-populate with standard types
+        for lt in ListenerTypes:
+            client.listeners[lt] = {}
+
 
 
 
