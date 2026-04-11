@@ -58,7 +58,21 @@ for client in [app, pro]:
         client.listeners[lt] = {}
 
 
-sex = TelegramClient('sexrepo', API_ID, API_HASH).start(bot_token=BOT_TOKEN)
+from telethon.errors import FloodWaitError
+import sys
+
+# Initialize Telethon Client with FloodWait handling
+try:
+    sex = TelegramClient('sexrepo', API_ID, API_HASH).start(bot_token=BOT_TOKEN)
+except FloodWaitError as f:
+    print(f"TELETHON FLOODWAIT: A wait of {f.seconds} seconds is required.")
+    print(f"The bot will sleep for 60 seconds and then exit to prevent a restart loop.")
+    time.sleep(60)
+    sys.exit(1)
+except Exception as e:
+    print(f"TELETHON ERROR: {e}")
+    sex = None # Fallback if possible, though bot might fail later
+
 
 
 

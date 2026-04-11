@@ -28,7 +28,21 @@ app = Client(
 )
 
 # Telethon Client for fast-upload/extraction
-sex = TelegramClient('sexrepo_lite', API_ID, API_HASH).start(bot_token=BOT_TOKEN)
+from telethon.errors import FloodWaitError
+import sys
+
+# Telethon Client for fast-upload/extraction with FloodWait handling
+try:
+    sex = TelegramClient('sexrepo_lite', API_ID, API_HASH).start(bot_token=BOT_TOKEN)
+except FloodWaitError as f:
+    print(f"TELETHON FLOODWAIT: A wait of {f.seconds} seconds is required.")
+    print(f"The lite bot will sleep for 60 seconds and then exit to prevent a restart loop.")
+    time.sleep(60)
+    sys.exit(1)
+except Exception as e:
+    print(f"TELETHON ERROR: {e}")
+    sex = None
+
 
 # Optional Premium Client
 pro = Client("pro_client", api_id=API_ID, api_hash=API_HASH, session_string=STRING) if STRING else None
