@@ -16,10 +16,9 @@ import asyncio
 import logging
 from pyrogram import Client
 from pyrogram.enums import ParseMode 
-from config import API_ID, API_HASH, BOT_TOKEN, STRING, MONGO_DB
-from telethon.sync import TelegramClient
 from motor.motor_asyncio import AsyncIOMotorClient
 import time
+from config import API_ID, API_HASH, BOT_TOKEN, STRING, STRINGS, MONGO_DB, MAX_CONCURRENT_TASKS
 
 loop = asyncio.get_event_loop()
 
@@ -35,11 +34,21 @@ app = Client(
     api_id=API_ID,
     api_hash=API_HASH,
     bot_token=BOT_TOKEN,
-    workers=50,
+    workers=100, # Increased workers for better speed
     parse_mode=ParseMode.MARKDOWN
 )
 
-pro = Client("ggbot", api_id=API_ID, api_hash=API_HASH, session_string=STRING)
+# Multi-client pool for balancing
+pro_clients = []
+if STRINGS:
+    for i, session in enumerate(STRINGS):
+        pro_clients.append(Client(f"pro_client_{i}", api_id=API_ID, api_hash=API_HASH, session_string=session, workers=50))
+    pro = pro_clients[0] # Backward compatibility
+else:
+    pro = None
+
+# Global Semaphore for concurrency control
+task_semaphore = asyncio.Semaphore(MAX_CONCURRENT_TASKS)
 
 sex = TelegramClient('sexrepo', API_ID, API_HASH).start(bot_token=BOT_TOKEN)
 
@@ -71,7 +80,12 @@ async def restrict_bot():
         BOT_NAME = getme.first_name + " " + getme.last_name
     else:
         BOT_NAME = getme.first_name
-    if STRING:
-        await pro.start()
+    if STRINGS:
+        for client in pro_clients:
+            await client.start()
+
+import random
+def get_client():
+    return random.choice(pro_clients) if pro_clients else None
 
 loop.run_until_complete(restrict_bot())

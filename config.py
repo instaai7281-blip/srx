@@ -27,5 +27,12 @@ PREMIUM_LIMIT = int(getenv("PREMIUM_LIMIT", "5000"))
 WEBSITE_URL = getenv("WEBSITE_URL", "upshrink.com")
 AD_API = getenv("AD_API", "")
 STRING = getenv("STRING", None)
+STRINGS = getenv("STRINGS", "").split()
+# If legacy STRING is present, add it to STRINGS list
+if STRING and STRING not in STRINGS:
+    STRINGS.append(STRING)
+
 YT_COOKIES = getenv("YT_COOKIES", YTUB_COOKIES)
 INSTA_COOKIES = getenv("INSTA_COOKIES", INST_COOKIES)
+# Optimization: Number of concurrent tasks
+MAX_CONCURRENT_TASKS = int(getenv("MAX_CONCURRENT_TASKS", "10"))

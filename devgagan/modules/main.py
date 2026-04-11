@@ -18,7 +18,7 @@ import random
 import string
 import asyncio
 from pyrogram import filters, Client
-from devgagan import app
+from devgagan import app, task_semaphore
 from config import API_ID, API_HASH, FREEMIUM_LIMIT, PREMIUM_LIMIT, OWNER_ID
 from devgagan.core.get_func import get_msg
 from devgagan.core.func import *
@@ -106,27 +106,27 @@ async def single_link(_, message):
     msg = await message.reply("Processing...")
     userbot = await initialize_userbot(user_id)
 
-    try:
-        if await is_normal_tg_link(link):
-            # Pass userbot if available; handle normal Telegram links
-            await process_and_upload_link(userbot, user_id, msg.id, link, 0, message)
-            await set_interval(user_id, interval_minutes=45)
-        else:
-            # Handle special Telegram links
-            await process_special_links(userbot, user_id, msg, link)
-            
-    except FloodWait as fw:
-        await msg.edit_text(f'Try again after {fw.x} seconds due to floodwait from Telegram.')
-    except Exception as e:
-        await msg.edit_text(f"Link: `{link}`\n\n**Error:** {str(e)}")
-    finally:
-        users_loop[user_id] = False
-        if userbot:
-            await userbot.stop()
+    async with task_semaphore:
         try:
-            await msg.delete()
-        except Exception:
-            pass
+            if await is_normal_tg_link(link):
+                # Pass userbot if available; handle normal Telegram links
+                await process_and_upload_link(userbot, user_id, msg.id, link, 0, message)
+                await set_interval(user_id, interval_minutes=45)
+            else:
+                # Handle special Telegram links
+                await process_special_links(userbot, user_id, msg, link)
+        except FloodWait as fw:
+            await msg.edit_text(f'Try again after {fw.x} seconds due to floodwait from Telegram.')
+        except Exception as e:
+            await msg.edit_text(f"Link: `{link}`\n\n**Error:** {str(e)}")
+        finally:
+            users_loop[user_id] = False
+            if userbot:
+                await userbot.stop()
+            try:
+                await msg.delete()
+            except Exception:
+                pass
 
 
 async def initialize_userbot(user_id): # this ensure the single startup .. even if logged in or not
@@ -240,54 +240,49 @@ async def batch_link(_, message):
 
     users_loop[user_id] = True
     try:
-        normal_links_handled = False
         userbot = await initialize_userbot(user_id)
-        # Handle normal links first
-        for i in range(cs, cs + cl):
-            if user_id in users_loop and users_loop[user_id]:
-                url = f"{'/'.join(start_id.split('/')[:-1])}/{i}"
-                link = get_link(url)
-                # Process t.me links (normal) without userbot
-                if 't.me/' in link and not any(x in link for x in ['t.me/b/', 't.me/c/', 'tg://openmessage']):
-                    msg = await app.send_message(message.chat.id, f"Processing...")
-                    await process_and_upload_link(userbot, user_id, msg.id, link, 0, message)
-                    await pin_msg.edit_text(
-                        f"Batch process started ⚡\nProcessing: {i - cs + 1}/{cl}\n\n**__Powered by CHOSEN ONE ⚝__**",
-                        reply_markup=keyboard
-                    )
-                    normal_links_handled = True
-        if normal_links_handled:
-            await set_interval(user_id, interval_minutes=300)
-            await pin_msg.edit_text(
-                f"Batch completed successfully for {cl} messages 🎉\n\n**__Powered by CHOSEN ONE ⚝__**",
-                reply_markup=keyboard
-            )
-            await app.send_message(message.chat.id, "😘 𝗖ꪮ𝗺𝗽𝗹𝗲𝘁𝗲 𝗛ꪮ 𝗚𝗮𝘆𝗮 𝗕ꪮ$$ 😎")
-            return
-            
-        # Handle special links with userbot
-        for i in range(cs, cs + cl):
-            if not userbot:
-                await app.send_message(message.chat.id, "Login in bot first ...")
-                users_loop[user_id] = False
+        
+        async def process_task(i):
+            if user_id not in users_loop or not users_loop[user_id]:
                 return
-            if user_id in users_loop and users_loop[user_id]:
+            async with task_semaphore:
                 url = f"{'/'.join(start_id.split('/')[:-1])}/{i}"
                 link = get_link(url)
-                if any(x in link for x in ['t.me/b/', 't.me/c/']):
-                    msg = await app.send_message(message.chat.id, f"Processing...")
+                if not link:
+                    return
+                
+                # Check link type
+                is_special = any(x in link for x in ['t.me/b/', 't.me/c/', 'tg://openmessage'])
+                
+                if is_special and not userbot:
+                    return # Can't process special without userbot
+                
+                msg = await app.send_message(message.chat.id, f"Processing {i}...")
+                try:
                     await process_and_upload_link(userbot, user_id, msg.id, link, 0, message)
-                    await pin_msg.edit_text(
-                        f"Batch process started ⚡\nProcessing: {i - cs + 1}/{cl}\n\n**__Powered by CHOSEN ONE ⚝__**",
-                        reply_markup=keyboard
-                    )
+                except Exception as e:
+                    await app.send_message(message.chat.id, f"Error at {i}: {e}")
+                finally:
+                    await msg.delete()
+                    # Update progress
+                    current_progress = i - cs + 1
+                    try:
+                        await pin_msg.edit_text(
+                            f"Batch process started ⚡\nProcessing: {current_progress}/{cl}\n\n**__Powered by CHOSEN ONE ⚝__**",
+                            reply_markup=keyboard
+                        )
+                    except:
+                        pass
+
+        # Create tasks for all IDs in the batch
+        tasks = [process_task(i) for i in range(cs, cs + cl)]
+        await asyncio.gather(*tasks)
 
         await set_interval(user_id, interval_minutes=300)
         await pin_msg.edit_text(
             f"Batch completed successfully for {cl} messages 🎉\n\n**__Powered by CHOSEN ONE ⚝__**",
             reply_markup=keyboard
         )
-        await app.send_message(message.chat.id, "Batch completed successfully! 🎉")
         await app.send_message(message.chat.id, "Batch completed successfully! 🎉")
 
     except Exception as e:
