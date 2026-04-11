@@ -31,7 +31,7 @@ from pyrogram.enums import MessageMediaType, ParseMode
 from devgagan.core.func import *
 from pyrogram.errors import RPCError
 from pyrogram.types import Message
-from config import MONGO_DB as MONGODB_CONNECTION_STRING, LOG_GROUP, OWNER_ID, STRING, API_ID, API_HASH
+from config import MONGO_DB as MONGODB_CONNECTION_STRING, LOG_GROUP, OWNER_ID, STRING, STRINGS, API_ID, API_HASH
 from devgagan.core.mongo import db as odb
 from telethon import TelegramClient, events, Button
 from devgagantools import fast_upload
@@ -93,12 +93,12 @@ mongo_app = pymongo.MongoClient(MONGODB_CONNECTION_STRING)
 db = mongo_app[DB_NAME]
 collection = db[COLLECTION_NAME]
 
-if STRING:
+if STRINGS:
     from devgagan import pro
     print("App imported")
 else:
     pro = None
-    print("STRING is not available. 'app' is set to None.")
+    print("STRINGS is not available. 'app' is set to None.")
 
 async def is_enabled(user_id, media_type):
     data = await odb.get_data(user_id)
@@ -1486,19 +1486,26 @@ async def split_and_upload_file(app, sender, target_chat_id, file_path, caption,
     PART_SIZE =  1.9 * 1024 * 1024 * 1024
 
     part_number = 0
-    async with aiofiles.open(file_path, mode="rb") as f:
+    with open(file_path, "rb") as f:
         while True:
-            chunk = await f.read(PART_SIZE)
-            if not chunk:
-                break
-
             # Create part filename
             base_name, file_ext = os.path.splitext(file_path)
             part_file = f"{base_name}.part{str(part_number).zfill(3)}{file_ext}"
+            
+            # Read and write chunks until part is complete
+            with open(part_file, "wb") as part_f:
+                bytes_written = 0
+                while bytes_written < PART_SIZE:
+                    chunk = f.read(min(1024 * 1024, int(PART_SIZE - bytes_written))) # 1MB chunks
+                    if not chunk:
+                        break
+                    part_f.write(chunk)
+                    bytes_written += len(chunk)
+            
+            if os.path.getsize(part_file) == 0:
+                os.remove(part_file)
+                break
 
-            # Write part to file
-            async with aiofiles.open(part_file, mode="wb") as part_f:
-                await part_f.write(chunk)
 
             # Uploading part
             edit = await app.send_message(target_chat_id, f"⬆️ Uploading part {part_number + 1}...")

@@ -439,19 +439,25 @@ async def split_and_upload_file(app, sender, file_path, caption):
     PART_SIZE =  1.9 * 1024 * 1024 * 1024
 
     part_number = 0
-    async with aiofiles.open(file_path, mode="rb") as f:
+    with open(file_path, "rb") as f:
         while True:
-            chunk = await f.read(PART_SIZE)
-            if not chunk:
-                break
-
             # Create part filename
             base_name, file_ext = os.path.splitext(file_path)
             part_file = f"{base_name}.part{str(part_number).zfill(3)}{file_ext}"
-
-            # Write part to file
-            async with aiofiles.open(part_file, mode="wb") as part_f:
-                await part_f.write(chunk)
+            
+            # Read and write chunks until part is complete
+            with open(part_file, "wb") as part_f:
+                bytes_written = 0
+                while bytes_written < PART_SIZE:
+                    chunk = f.read(min(1024 * 1024, int(PART_SIZE - bytes_written))) # 1MB chunks
+                    if not chunk:
+                        break
+                    part_f.write(chunk)
+                    bytes_written += len(chunk)
+            
+            if os.path.getsize(part_file) == 0:
+                os.remove(part_file)
+                break
 
             # Uploading part
             edit = await app.send_message(sender, f"⬆️ Uploading part {part_number + 1}...")
