@@ -242,20 +242,21 @@ async def batch_link(_, message):
     try:
         userbot = await initialize_userbot(user_id)
         
-        async def process_task(i):
+        for i in range(cs, cs + cl):
             if user_id not in users_loop or not users_loop[user_id]:
-                return
+                break
+            
             async with task_semaphore:
                 url = f"{'/'.join(start_id.split('/')[:-1])}/{i}"
                 link = get_link(url)
                 if not link:
-                    return
+                    continue
                 
                 # Check link type
                 is_special = any(x in link for x in ['t.me/b/', 't.me/c/', 'tg://openmessage'])
                 
                 if is_special and not userbot:
-                    return # Can't process special without userbot
+                    continue
                 
                 msg = await app.send_message(message.chat.id, f"Processing {i}...")
                 try:
@@ -264,7 +265,7 @@ async def batch_link(_, message):
                     await app.send_message(message.chat.id, f"Error at {i}: {e}")
                 finally:
                     await msg.delete()
-                    # Update progress
+                    # Update progress in pinned message
                     current_progress = i - cs + 1
                     try:
                         await pin_msg.edit_text(
@@ -273,10 +274,6 @@ async def batch_link(_, message):
                         )
                     except:
                         pass
-
-        # Create tasks for all IDs in the batch
-        tasks = [process_task(i) for i in range(cs, cs + cl)]
-        await asyncio.gather(*tasks)
 
         await set_interval(user_id, interval_minutes=300)
         await pin_msg.edit_text(
