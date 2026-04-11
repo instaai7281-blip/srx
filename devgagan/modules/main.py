@@ -246,34 +246,33 @@ async def batch_link(_, message):
             if user_id not in users_loop or not users_loop[user_id]:
                 break
             
-            async with task_semaphore:
-                url = f"{'/'.join(start_id.split('/')[:-1])}/{i}"
-                link = get_link(url)
-                if not link:
-                    continue
-                
-                # Check link type
-                is_special = any(x in link for x in ['t.me/b/', 't.me/c/', 'tg://openmessage'])
-                
-                if is_special and not userbot:
-                    continue
-                
-                msg = await app.send_message(message.chat.id, f"Processing {i}...")
+            url = f"{'/'.join(start_id.split('/')[:-1])}/{i}"
+            link = get_link(url)
+            if not link:
+                continue
+            
+            # Check link type
+            is_special = any(x in link for x in ['t.me/b/', 't.me/c/', 'tg://openmessage'])
+            if is_special and not userbot:
+                continue
+            
+            msg = await app.send_message(message.chat.id, f"Processing {i}...")
+            try:
+                await process_and_upload_link(userbot, user_id, msg.id, link, 0, message)
+                await asyncio.sleep(1) # Small delay to ensure sequential arrival in TG
+            except Exception as e:
+                await app.send_message(message.chat.id, f"Error at {i}: {e}")
+            finally:
+                await msg.delete()
+                # Update progress in pinned message
+                current_progress = i - cs + 1
                 try:
-                    await process_and_upload_link(userbot, user_id, msg.id, link, 0, message)
-                except Exception as e:
-                    await app.send_message(message.chat.id, f"Error at {i}: {e}")
-                finally:
-                    await msg.delete()
-                    # Update progress in pinned message
-                    current_progress = i - cs + 1
-                    try:
-                        await pin_msg.edit_text(
-                            f"Batch process started ⚡\nProcessing: {current_progress}/{cl}\n\n**__Powered by CHOSEN ONE ⚝__**",
-                            reply_markup=keyboard
-                        )
-                    except:
-                        pass
+                    await pin_msg.edit_text(
+                        f"Batch process started ⚡\nProcessing: {current_progress}/{cl}\n\n**__Powered by CHOSEN ONE ⚝__**",
+                        reply_markup=keyboard
+                    )
+                except:
+                    pass
 
         await set_interval(user_id, interval_minutes=300)
         await pin_msg.edit_text(
