@@ -47,9 +47,8 @@ async def devggn_boot():
         except Exception as e:
             print(f"❌ Failed to load module {all_module}: {e}")
     
-    # Summary of handlers
-    from devgagan import app
-    print(f"Total message handlers: {len(app.dispatcher.message_handlers)}")
+    # Setup complete
+
 
     print("""
 ---------------------------------------------------
