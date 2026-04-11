@@ -47,17 +47,10 @@ app = Client(
 
 pro = Client("ggbot", api_id=API_ID, api_hash=API_HASH, session_string=STRING)
 
-# Simplified pyromod listeners safety check to prevent RecursionError and KeyError
-from pyromod.listen.client import ListenerTypes
-for client in [app, pro]:
-    if client:
-        if not hasattr(client, 'listeners'):
-            client.listeners = {lt: {} for lt in ListenerTypes}
-        else:
-            # Only add missing keys, do not replace the dict or use defaultdict if risky
-            for lt in ListenerTypes:
-                if lt not in client.listeners:
-                    client.listeners[lt] = {}
+# Reverting to standard pyromod initialization to fix RecursionError
+import pyromod
+from pyrogram import Client
+
 
 
 
