@@ -39,8 +39,18 @@ async def schedule_expiry_check():
 
 async def devggn_boot():
     await restrict_bot()
+    print("Loading modules...")
     for all_module in ALL_MODULES:
-        importlib.import_module("devgagan.modules." + all_module)
+        try:
+            importlib.import_module("devgagan.modules." + all_module)
+            print(f"✅ Module loaded: {all_module}")
+        except Exception as e:
+            print(f"❌ Failed to load module {all_module}: {e}")
+    
+    # Summary of handlers
+    from devgagan import app
+    print(f"Total message handlers: {len(app.dispatcher.message_handlers)}")
+
     print("""
 ---------------------------------------------------
 Bot Deployed successfully ...

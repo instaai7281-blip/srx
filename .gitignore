@@ -35,11 +35,25 @@ env.bak/
 venv.bak/
 
 # Project configuration
-# config.py
+# Bot Assets
+settings.jpg
+!settings.jpg
 
-sessions/
+# Ignore all other media and logs
+*.jpg
+*.mp4
+*.part
+*.txt
 *.session
 *.session-journal
+thumbnails/
+RestrictedContentDL/
+__pycache__/
+*.pyc
+
+# Project configuration
+# config.py
+
 
 # OS generated files
 .DS_Store
