@@ -34,7 +34,7 @@ def get_settings_keyboard(user_data):
             InlineKeyboardButton(toggle_text("document"), callback_data="toggle_document")
         ],
         [
-            InlineKeyboardButton("🎵 Audio", callback_id="toggle_audio"), # Wait, callback_id should be callback_data
+            InlineKeyboardButton("🎵 Audio", callback_data="toggle_audio"),
             InlineKeyboardButton(toggle_text("audio"), callback_data="toggle_audio")
         ],
         [
