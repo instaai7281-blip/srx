@@ -82,6 +82,16 @@ async def remove_session(user_id):
     await db.update_one({"_id": user_id}, {"$set": {"session": None}})
 async def remove_channel(user_id):
     await db.update_one({"_id": user_id}, {"$set": {"chat_id": None}})
+async def set_filter(user_id, media_type, status):
+    data = await get_data(user_id)
+    if data and data.get("_id"):
+         
+        filters = data.get("filters", {})
+        filters[media_type] = status
+        await db.update_one({"_id": user_id}, {"$set": {"filters": filters}})
+    else:
+        await db.insert_one({"_id": user_id, "filters": {media_type: status}})
+
 async def delete_session(user_id):
     """Delete the session associated with the given user_id from the database."""
     await db.update_one({"_id": user_id}, {"$unset": {"session": ""}})

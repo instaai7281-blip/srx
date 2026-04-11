@@ -99,7 +99,14 @@ if STRING:
 else:
     pro = None
     print("STRING is not available. 'app' is set to None.")
-    
+
+async def is_enabled(user_id, media_type):
+    data = await odb.get_data(user_id)
+    if not data:
+        return True
+    filters = data.get("filters", {})
+    return filters.get(media_type, True)
+
 async def fetch_upload_method(user_id):
     """Fetch the user's preferred upload method."""
     user_data = collection.find_one({"user_id": user_id})
@@ -441,10 +448,14 @@ async def get_msg(userbot: TelegramClient, sender: int, edit_id: int, msg_link: 
 
         # Handle different message types
         if msg.media == MessageMediaType.WEB_PAGE_PREVIEW:
+            if not await is_enabled(sender, "text"):
+                return
             await clone_message(app, msg, target_chat_id, topic_id, edit_id, LOG_GROUP)
             return
 
         if msg.text:
+            if not await is_enabled(sender, "text"):
+                return
             await clone_text_message(app, msg, target_chat_id, topic_id, edit_id, LOG_GROUP)
             return
 
@@ -476,6 +487,8 @@ async def get_msg(userbot: TelegramClient, sender: int, edit_id: int, msg_link: 
         # Rename file
         file = await rename_file(file, sender)
         if msg.audio:
+            if not await is_enabled(sender, "audio"):
+                return
             result = await app.send_audio(target_chat_id, file, caption=caption, reply_to_message_id=topic_id)
             await result.copy(LOG_GROUP)
             await edit.delete(1)
@@ -488,6 +501,8 @@ async def get_msg(userbot: TelegramClient, sender: int, edit_id: int, msg_link: 
             return
 
         if msg.photo:
+            if not await is_enabled(sender, "photo"):
+                return
             result = await app.send_photo(target_chat_id, file, caption=caption, reply_to_message_id=topic_id)
             await result.copy(LOG_GROUP)
             await edit.delete(1)
@@ -495,6 +510,11 @@ async def get_msg(userbot: TelegramClient, sender: int, edit_id: int, msg_link: 
 
         # Upload media
         # await edit.edit("**Checking file...**")
+        if msg.video and not await is_enabled(sender, "video"):
+            return
+        if msg.document and not await is_enabled(sender, "document"):
+            return
+
         free_check = await chk_user(message, sender)
         if file_size > size_limit and (free_check == 0 or pro is None):
             await edit.delete()
