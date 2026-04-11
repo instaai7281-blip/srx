@@ -47,24 +47,17 @@ app = Client(
 
 pro = Client("ggbot", api_id=API_ID, api_hash=API_HASH, session_string=STRING)
 
-from pyrogram import filters
-# Safely initialize pyromod listeners to definitively prevent KeyError
-from collections import defaultdict
+# Simplified pyromod listeners safety check to prevent RecursionError and KeyError
 from pyromod.listen.client import ListenerTypes
 for client in [app, pro]:
     if client:
-        # If listeners already exists, update its type to defaultdict to prevent KeyError
-        old_listeners = getattr(client, 'listeners', {})
-        client.listeners = defaultdict(dict, old_listeners)
-        # Ensure it has the base types
-        for lt in ListenerTypes:
-            if lt not in client.listeners:
-                client.listeners[lt] = {}
-
-# Global Debug Handler to check if messages are reaching the bot
-@app.on_message(filters.all, group=-1)
-async def debug_handler(client, message):
-    logging.info(f"DEBUG: Received message from {message.from_user.id}: {message.text or message.caption}")
+        if not hasattr(client, 'listeners'):
+            client.listeners = {lt: {} for lt in ListenerTypes}
+        else:
+            # Only add missing keys, do not replace the dict or use defaultdict if risky
+            for lt in ListenerTypes:
+                if lt not in client.listeners:
+                    client.listeners[lt] = {}
 
 
 
