@@ -18,6 +18,7 @@ from pyrogram import Client
 from pyrogram.enums import ParseMode 
 from motor.motor_asyncio import AsyncIOMotorClient
 import time
+from telethon.sync import TelegramClient
 from config import API_ID, API_HASH, BOT_TOKEN, STRING, STRINGS, MONGO_DB, MAX_CONCURRENT_TASKS
 
 loop = asyncio.get_event_loop()
