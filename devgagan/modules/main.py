@@ -71,7 +71,7 @@ async def set_interval(user_id, interval_minutes=45):
     
 
 @app.on_message(
-    filters.regex(r'https?://(?:www\.)?t\.me/[^\s]+|tg://openmessage\?user_id=\w+&message_id=\d+')
+    filters.regex(r'https?://(?:www\.)?(?:t\.me|telegram\.me|telegram\.dog)/[^\s]+|tg://openmessage\?user_id=\w+&message_id=\d+')
     & filters.private
 )
 async def single_link(_, message):
@@ -151,15 +151,16 @@ async def initialize_userbot(user_id): # this ensure the single startup .. even 
 
 async def is_normal_tg_link(link: str) -> bool:
     """Check if the link is a standard Telegram link."""
-    special_identifiers = ['t.me/+', 't.me/c/', 't.me/b/', 'tg://openmessage']
-    return 't.me/' in link and not any(x in link for x in special_identifiers)
+    # Updated to handle more domains and topic links robustly
+    special_identifiers = ['t.me/+', 't.me/c/', 't.me/b/', 'tg://openmessage', 'telegram.me/+', 'telegram.me/c/', 'telegram.dog/+', 'telegram.dog/c/']
+    return any(domain in link for domain in ['t.me/', 'telegram.me/', 'telegram.dog/']) and not any(x in link for x in special_identifiers)
     
 async def process_special_links(userbot, user_id, msg, link):
     """Handle special Telegram links."""
     if 't.me/+' in link:
         result = await userbot_join(userbot, link)
         await msg.edit_text(result)
-    elif any(sub in link for sub in ['t.me/c/', 't.me/b/', '/s/', 'tg://openmessage']):
+    elif any(sub in link for sub in ['t.me/c/', 't.me/b/', '/s/', 'tg://openmessage', 'telegram.me/c/', 'telegram.dog/c/', 'telegram.me/s/', 'telegram.dog/s/']):
         await process_and_upload_link(userbot, user_id, msg.id, link, 0, msg)
         await set_interval(user_id, interval_minutes=45)
     else:
@@ -196,7 +197,7 @@ async def batch_link(_, message):
             caption="Just Copy Post Link And Send it To Me.\n\nजहाँ से शुरू करना है उस पोस्ट का लिंक भेजो\n\nMake sure the link is correct!"
         )
         start = await app.ask(message.chat.id, "🎯 Send The Link For Where I Need To Start Process From \n\n> You Have Only 3 Tries")
-        start_id = start.text.strip()
+        start_id = start.text.strip().rstrip('/')
         s = start_id.split("/")[-1]
         if s.isdigit():
             cs = int(s)
@@ -252,7 +253,7 @@ async def batch_link(_, message):
                 continue
             
             # Check link type
-            is_special = any(x in link for x in ['t.me/b/', 't.me/c/', 'tg://openmessage'])
+            is_special = any(x in link for x in ['t.me/b/', 't.me/c/', 'tg://openmessage', 'telegram.me/c/', 'telegram.dog/c/'])
             if is_special and not userbot:
                 continue
             

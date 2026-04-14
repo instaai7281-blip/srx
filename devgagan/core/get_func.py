@@ -347,7 +347,7 @@ async def get_msg(userbot: TelegramClient, sender: int, edit_id: int, msg_link: 
         edit = ''
         # Extract chat and message ID for various Telegram link formats
         if 't.me/c/' in msg_link or 't.me/b/' in msg_link:
-            parts = msg_link.split("/")
+            parts = [p for p in msg_link.split("/") if p]
             if 't.me/b/' in msg_link:
                 chat = parts[-2]
                 msg_id = int(parts[-1]) + i
@@ -362,13 +362,14 @@ async def get_msg(userbot: TelegramClient, sender: int, edit_id: int, msg_link: 
             msg_id = int(params.get("message_id", [0])[0]) + i
             if chat and (chat.isdigit() or chat.startswith("-")):
                 chat = int(chat)
-        elif 't.me/' in msg_link:
+        elif 't.me/' in msg_link or 'telegram.me/' in msg_link or 'telegram.dog/' in msg_link:
             if '/s/' in msg_link: # handles stories
                 edit = await app.edit_message_text(sender, edit_id, "Story Link Detected...")
                 if userbot is None:
                     await edit.edit("Login in bot to save stories...")     
                     return
-                parts = msg_link.split("/")
+                parts = [p for p in msg_link.split("/") if p]
+                # parts: ['https:', 't.me', 's', 'chat_id', 'msg_id'] -> index 3 is chat_id
                 chat = parts[3]
                 if chat.isdigit():
                     chat = f"-100{chat}"
@@ -378,7 +379,12 @@ async def get_msg(userbot: TelegramClient, sender: int, edit_id: int, msg_link: 
                 return
             
             # Public links, Forum/Topic links
-            parts = msg_link.split("t.me/")[1].split("/")
+            # Link format: t.me/username/mid or t.me/username/topicid/mid
+            # Split and filter empty parts
+            domain = "t.me/" if "t.me/" in msg_link else "telegram.me/" if "telegram.me/" in msg_link else "telegram.dog/"
+            parts = [p for p in msg_link.split(domain)[1].split("/") if p]
+            if not parts:
+                return
             chat = parts[0]
             msg_id = int(parts[-1]) + i
         else:
