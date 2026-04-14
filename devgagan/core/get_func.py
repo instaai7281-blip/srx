@@ -710,10 +710,6 @@ async def copy_message_with_chat_id(app, userbot, sender, chat_id, message_id, e
     
     return False
 
-    finally:
-        if file and os.path.exists(file):
-            os.remove(file)
-
 async def send_media_message(app, target_chat_id, msg, caption, topic_id):
     try:
         file_name = None
