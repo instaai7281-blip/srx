@@ -79,7 +79,7 @@ def thumbnail(sender):
 
 
 
-THUMBNAIL_DIR = "./thumbnails"
+THUMBNAIL_DIR = os.path.abspath("./thumbnails")
 os.makedirs(THUMBNAIL_DIR, exist_ok=True)
 
 # MongoDB database name and collection name
@@ -177,19 +177,15 @@ async def upload_media(sender, target_chat_id, file, caption, edit, topic_id):
         height = metadata.get('height', 0)
         duration = metadata.get('duration', 0)
 
-        # Always initialize thumb_path first
-        thumb_path = None  
+        # ✅ Check for custom thumbnail first (for all media types)
+        thumb_path = thumbnail(sender)
 
-        # ✅ Generate thumbnail ONLY if it's a video
-        if file.lower().endswith(tuple(VIDEO_EXTENSIONS)):
-            # Try to reuse a saved custom thumbnail first
-            thumb_path = thumbnail(sender)
-            if not thumb_path:
-                # Generate a thumbnail from the video using ffmpeg
-                try:
-                    thumb_path = await screenshot(file, duration, sender)
-                except Exception:
-                    thumb_path = None
+        # ✅ Fallback to auto-screenshot ONLY if it's a video and NO custom thumb exists
+        if not thumb_path and file.lower().endswith(tuple(VIDEO_EXTENSIONS)):
+            try:
+                thumb_path = await screenshot(file, duration, sender)
+            except Exception:
+                thumb_path = None
 
         ext = file.split('.')[-1].lower()
         raw_name = os.path.basename(file)
@@ -1099,15 +1095,11 @@ async def save_thumbnail(event):
     user_id = event.sender_id  # Use event.sender_id as user_id
 
     if event.photo:
-        temp_path = await event.download_media()
         thumbnail_path = os.path.join(THUMBNAIL_DIR, f"{user_id}.jpg")
-        if os.path.exists(thumbnail_path):
-            os.remove(thumbnail_path)
-        os.rename(temp_path, thumbnail_path)
-        await event.respond('Thumbnail saved successfully!')
-
+        await event.download_media(file=thumbnail_path)
+        await event.respond('✅ **Custom thumbnail saved successfully!**')
     else:
-        await event.respond('Please send a photo... Retry')
+        await event.respond('❌ Please send a **photo** to set it as a thumbnail.')
 
     # Remove user from pending photos dictionary in both cases
     pending_photos.pop(user_id, None)

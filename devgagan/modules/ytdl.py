@@ -367,7 +367,7 @@ async def process_video(client, event, url, cookies_env_var, check_duration_and_
         THUMB = None
  
         # ✅ Check for custom thumbnail first
-        custom_thumb = os.path.join("./thumbnails", f"{event.sender_id}.jpg")
+        custom_thumb = os.path.join(os.path.abspath("./thumbnails"), f"{event.sender_id}.jpg")
         if os.path.exists(custom_thumb):
             THUMB = custom_thumb
         elif thumbnail_url:
