@@ -218,43 +218,57 @@ def video_metadata(file):
 def hhmmss(seconds):
     return time.strftime('%H:%M:%S',time.gmtime(seconds))
 
+# REPLACE screenshot() function in devgagan/core/func.py (Line 221-257)
+
 async def screenshot(video, duration, sender):
-    # Ensure we seek to at least 1 second in, even for short videos
-    seek_time = max(int(duration) // 2, 1)
-    time_stamp = hhmmss(seek_time)
-    out = f"thumb_{sender}_{int(time.time())}.jpg"
-    cmd = ["ffmpeg",
-           "-ss",
-           f"{time_stamp}", 
-           "-i",
-           f"{video}",
-           "-frames:v",
-           "1",
-           "-q:v",
-           "2",
-           "-an",
-           "-threads",
-           "1",
-           f"{out}",
-           "-y"
-          ]
     try:
+        # Validate inputs
+        if duration <= 0:
+            print(f"[ERROR] Invalid duration: {duration}")
+            return None
+            
+        seek_time = max(int(duration) // 2, 1)
+        time_stamp = hhmmss(seek_time)
+        out = f"thumb_{sender}_{int(time.time())}.jpg"
+        
+        print(f"[DEBUG] Creating thumbnail: seek_time={seek_time}, output={out}")
+        
+        cmd = ["ffmpeg",
+               "-ss", f"{time_stamp}", 
+               "-i", f"{video}",
+               "-frames:v", "1",
+               "-q:v", "2",
+               "-an",
+               "-threads", "1",
+               f"{out}",
+               "-y"
+              ]
+        
         process = await asyncio.create_subprocess_exec(
             *cmd,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE
         )
         stdout, stderr = await process.communicate()
+        
         if process.returncode != 0:
-            print(f"FFmpeg screenshot failed (code {process.returncode}): {stderr.decode().strip()[-200:]}")
+            stderr_msg = stderr.decode().strip()[-200:]
+            print(f"[ERROR] FFmpeg failed (code {process.returncode}): {stderr_msg}")
+            return None
+            
         if os.path.isfile(out):
+            print(f"[SUCCESS] Thumbnail created: {out}")
             return out
         else:
-            print(f"Thumbnail file not created for {video}")
+            print(f"[ERROR] Thumbnail file not created: {out}")
             return None
+            
     except Exception as e:
-        print(f"Screenshot exception: {e}")
+        print(f"[CRITICAL] Screenshot exception: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return None
+        
 last_update_time = time.time()
 async def progress_callback(current, total, progress_message):
     percent = (current / total) * 100
