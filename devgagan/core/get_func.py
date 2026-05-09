@@ -86,7 +86,7 @@ def clean_text_advanced(text, user_tag, delete_words=None, replacements=None):
     text = re.sub(r'[)}\]]', '〙', text)
 
     # Rebrand common extraction markers
-    text = re.sub(r'(?i)(Extracted|Downloaded|Uploaded)[\s_]*By\s*[:➤>–\-]*\s*[^\n]*', r'<b>Sᴛꪮʟᴇɴ Hᴀᴘᴘɪɴᴇss</b>', text)
+    text = re.sub(r'(?i)(Extracted|Download|Upload|Forwarded)[\s_]*By\s*[:➤>–\-]*\s*[^\n]*', r'<b>Sᴛꪮʟᴇɴ Hᴀᴘᴘɪɴᴇss</b>', text)
 
     # Apply custom delete words
     if delete_words:
@@ -109,6 +109,10 @@ def clean_filename(text, user_tag):
     
     # Remove unwanted branding first
     text = clean_text_advanced(text, user_tag, None, None)
+    
+    # Replace brackets with stylized ones
+    text = re.sub(r'[({[]', '〘', text)
+    text = re.sub(r'[)}\]]', '〙', text)
 
     # Normalize to separate combined accents
     text = unicodedata.normalize("NFKC", text)
@@ -601,7 +605,9 @@ async def get_msg(userbot: TelegramClient, sender: int, edit_id: int, msg_link: 
         # Ensure extraction uses the same client
         userbot = client
 
-        target_chat_id = user_chat_ids.get(message.chat.id, message.chat.id)
+        # Get target chat from DB
+        user_data = await odb.get_data(sender)
+        target_chat_id = user_data.get("chat_id", sender) if user_data else sender
         topic_id = None
         if '/' in str(target_chat_id):
             target_chat_id, topic_id = map(int, target_chat_id.split('/', 1))
@@ -794,7 +800,9 @@ async def get_final_caption(msg, sender):
     replacements = user_data.get("replacement_words", {}) if user_data else {}
     cleaned_original = clean_text_advanced(original_caption, active_tag, delete_words, replacements)
     
-    if custom_caption:
+    caption_enabled = user_data.get("caption_enabled", True) if user_data else True
+    
+    if custom_caption and caption_enabled:
         # Use user's custom caption template
         if "{caption}" in custom_caption:
             final_text = custom_caption.replace("{caption}", cleaned_original)
@@ -839,7 +847,8 @@ async def download_user_stories(userbot, chat_id, msg_id, edit, sender):
         await edit.edit(f"Error: {e}")
         
 async def copy_message_with_chat_id(app, userbot, sender, chat_id, message_id, edit):
-    target_chat_id = user_chat_ids.get(sender, sender)
+    user_data = await odb.get_data(sender)
+    target_chat_id = user_data.get("chat_id", sender) if user_data else sender
     file = None
     result = None
     size_limit = 2 * 1024 * 1024 * 1024  # 2 GB size limit
@@ -1587,7 +1596,8 @@ async def handle_large_file(file, sender, edit, caption):
     print("4GB connector found.")
     await edit.edit('**__ ✅ 4GB trigger connected...__**\n\n')
     
-    target_chat_id = user_chat_ids.get(sender, sender)
+    user_data = await odb.get_data(sender)
+    target_chat_id = user_data.get("chat_id", sender) if user_data else sender
     file_extension = str(file).split('.')[-1].lower()
     metadata = video_metadata(file)
     duration = metadata['duration']

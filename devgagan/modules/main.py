@@ -244,6 +244,7 @@ async def batch_link(_, message):
     userbot = None
     success_count = 0
     fail_count = 0
+    start_time_batch = time.time()
     
     try:
         userbot = await initialize_userbot(user_id)
@@ -284,11 +285,24 @@ async def batch_link(_, message):
                 print(f"Error at {i}: {e}")
                 fail_count += 1
             
-            # Update progress every few messages or at the end to avoid spamming API
-            if (success_count + fail_count) % 2 == 0 or (success_count + fail_count) == cl:
+            # Update progress
+            done = success_count + fail_count
+            if done % 2 == 0 or done == cl:
+                # Calculate ETA
+                elapsed_time = time.time() - start_time_batch
+                avg_time_per_msg = elapsed_time / done if done > 0 else 1.5
+                remaining_msgs = cl - done
+                eta_seconds = int(remaining_msgs * avg_time_per_msg)
+                eta_str = str(timedelta(seconds=eta_seconds))
+                
                 try:
                     await pin_msg.edit_text(
-                        f"🚀 **Batch process in progress...**\n\n✅ **Processed:** {success_count}/{cl}\n❌ **Failed:** {fail_count}\n⏳ **Current ID:** `{i}`\n\n**Powered by CHOSEN ONE ⚝**",
+                        f"🚀 **Batch process in progress...**\n\n"
+                        f"✅ **Processed:** {success_count}/{cl}\n"
+                        f"❌ **Failed:** {fail_count}\n"
+                        f"⏳ **ETA:** `{eta_str}`\n"
+                        f"📍 **Current ID:** `{i}`\n\n"
+                        f"**Powered by CHOSEN ONE ⚝**",
                         reply_markup=keyboard
                     )
                 except:
