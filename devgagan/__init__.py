@@ -22,6 +22,14 @@ from motor.motor_asyncio import AsyncIOMotorClient
 import time
 from config import API_ID, API_HASH, BOT_TOKEN, STRING, STRINGS, MONGO_DB, MAX_CONCURRENT_TASKS, OWNER_ID, LOG_GROUP
 
+# DNS fix for MongoDB SRV resolution on Railway
+try:
+    import dns.resolver
+    dns.resolver.default_resolver = dns.resolver.Resolver(configure=False)
+    dns.resolver.default_resolver.nameservers = ['8.8.8.8', '1.1.1.1']
+except Exception as e:
+    print(f"DNS Resolver fix failed: {e}")
+
 print("--- RestrictBot: Optimized Build v2.5 Loading ---")
 
 loop = asyncio.get_event_loop()
@@ -77,7 +85,11 @@ async def setup_database():
 
 async def restrict_bot():
     global BOT_ID, BOT_NAME, BOT_USERNAME
-    await setup_database()
+    try:
+        await setup_database()
+    except Exception as e:
+        print(f"❌ Database Setup Error: {e}")
+        print("Continuing without TTL index optimization...")
     await app.start()
     getme = await app.get_me()
     BOT_ID = getme.id

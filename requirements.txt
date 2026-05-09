@@ -24,3 +24,4 @@ speedtest-cli
 python-dotenv
 PyPDF2
 reportlab
+dnspython
