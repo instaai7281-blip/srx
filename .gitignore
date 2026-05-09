@@ -16,3 +16,4 @@ dist/
 build/
 new src/
 *.session
+*.session-journal

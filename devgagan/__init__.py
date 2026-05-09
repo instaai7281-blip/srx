@@ -55,7 +55,8 @@ app = Client(
 pro_clients = []
 if STRINGS:
     for i, session in enumerate(STRINGS):
-        pro_clients.append(Client(f"pro_client_{i}", api_id=API_ID, api_hash=API_HASH, session_string=session, workers=50, sleep_threshold=60))
+        # Setting no_updates=True prevents the client from crashing on unknown Story updates
+        pro_clients.append(Client(f"pro_client_{i}", api_id=API_ID, api_hash=API_HASH, session_string=session, workers=50, sleep_threshold=60, no_updates=True))
     pro = pro_clients[0] # Backward compatibility
 else:
     pro = None
