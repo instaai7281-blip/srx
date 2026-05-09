@@ -503,40 +503,42 @@ async def get_msg(userbot: TelegramClient, sender: int, edit_id: int, msg_link: 
         file = ''
         edit = ''
         # Extract chat and message ID for various Telegram link formats
-        if 't.me/c/' in msg_link or 't.me/b/' in msg_link:
-            parts = [p for p in msg_link.split("/") if p]
-            if 't.me/b/' in msg_link:
-                chat = parts[-2]
-                msg_id = int(parts[-1]) + i
-            else:
-                chat = int('-100' + parts[parts.index('c') + 1])
-                msg_id = int(parts[-1]) + i
-        elif 'tg://openmessage' in msg_link:
-            import urllib.parse
-            parsed_url = urllib.parse.urlparse(msg_link)
-            params = urllib.parse.parse_qs(parsed_url.query)
-            # Handle user_id, chat_id and id parameters
-            chat_val = params.get("user_id", [None])[0] or params.get("chat_id", [None])[0] or params.get("id", [None])[0]
-            msg_id = int(params.get("message_id", [0])[0]) + i
-            if chat_val:
-                chat_val = chat_val.strip()
-                if chat_val.isdigit():
-                    if len(chat_val) >= 10 and not chat_val.startswith("-100"):
-                        chat = int("-100" + chat_val)
-                    else:
-                        chat = int(chat_val)
-                elif chat_val.startswith("-"):
-                    chat = int(chat_val)
-                else:
-                    chat = chat_val
+        if 't.me/c/' in msg_link or 't.me/b/' in msg_link or 'tg://openmessage' in msg_link:
+            # First check if userbot is even available for private links
+            if userbot is None:
+                await app.edit_message_text(sender, edit_id, "❌ **Login Required!**\n\nPrivate links require a user session. Please use /login to access this content.")
+                return
             
-            # Update processing message for private links
             edit = await app.edit_message_text(sender, edit_id, "Processing Private Link... 🔐")
             
-            # Check if userbot is available
-            if userbot is None:
-                await edit.edit("Please login using /login to access private links.")
-                return
+            if 't.me/c/' in msg_link or 't.me/b/' in msg_link:
+                parts = [p for p in msg_link.split("/") if p]
+                if 't.me/b/' in msg_link:
+                    chat = parts[-2]
+                    msg_id = int(parts[-1]) + i
+                else:
+                    # Handle both standard and topic links
+                    # Format: t.me/c/12345/100 or t.me/c/12345/2/100
+                    chat_val = parts[parts.index('c') + 1]
+                    chat = int('-100' + chat_val)
+                    msg_id = int(parts[-1]) + i
+            elif 'tg://openmessage' in msg_link:
+                import urllib.parse
+                parsed_url = urllib.parse.urlparse(msg_link)
+                params = urllib.parse.parse_qs(parsed_url.query)
+                chat_val = params.get("user_id", [None])[0] or params.get("chat_id", [None])[0] or params.get("id", [None])[0]
+                msg_id = int(params.get("message_id", [0])[0]) + i
+                if chat_val:
+                    chat_val = chat_val.strip()
+                    if chat_val.isdigit():
+                        if len(chat_val) >= 10 and not chat_val.startswith("-100"):
+                            chat = int("-100" + chat_val)
+                        else:
+                            chat = int(chat_val)
+                    elif chat_val.startswith("-"):
+                        chat = int(chat_val)
+                    else:
+                        chat = chat_val
         elif 't.me/' in msg_link or 'telegram.me/' in msg_link or 'telegram.dog/' in msg_link:
             if '/s/' in msg_link: # handles stories
                 edit = await app.edit_message_text(sender, edit_id, "Story Link Detected...")
@@ -592,14 +594,38 @@ async def get_msg(userbot: TelegramClient, sender: int, edit_id: int, msg_link: 
         
         try:
             msg = await client.get_messages(chat, msg_id)
+        except RPCError as e:
+            if "CHAT_ADMIN_REQUIRED" in str(e):
+                await app.edit_message_text(sender, edit_id, "❌ **Admin Rights Required!**\n\nYou need to be an admin to extract from this source.")
+            elif "USER_NOT_PARTICIPANT" in str(e) or "CHANNEL_PRIVATE" in str(e):
+                # If it's a public channel, try joining first
+                if not isinstance(chat, int) or str(chat).startswith("-100"):
+                    try:
+                        await edit.edit("🔒 **Restricted Source... Attempting to Join...**")
+                        await client.join_chat(chat)
+                        msg = await client.get_messages(chat, msg_id)
+                    except Exception as join_err:
+                        await app.edit_message_text(sender, edit_id, "❌ **Access Denied!**\n\nYou are not a member of this private channel. Please join it first with your logged-in account.")
+                        return
+                else:
+                    await app.edit_message_text(sender, edit_id, "❌ **Access Denied!**\n\nYou are not a member of this private channel. Please join it first with your logged-in account.")
+            else:
+                await app.edit_message_text(sender, edit_id, f"❌ **Telegram Error:** {e}")
+            return
         except Exception as e:
             if userbot: # If userbot failed, try fallback
-                client = get_client() or app
-                msg = await client.get_messages(chat, msg_id)
+                try:
+                    client = get_client() or app
+                    msg = await client.get_messages(chat, msg_id)
+                except:
+                    await app.edit_message_text(sender, edit_id, f"❌ **Error:** {e}")
+                    return
             else:
-                raise e
+                await app.edit_message_text(sender, edit_id, f"❌ **Error:** {e}")
+                return
         
         if not msg or msg.service or msg.empty:
+            await app.edit_message_text(sender, edit_id, "❌ **Message not found or empty.**")
             return
         
         # Ensure extraction uses the same client
@@ -616,13 +642,13 @@ async def get_msg(userbot: TelegramClient, sender: int, edit_id: int, msg_link: 
         if msg.media == MessageMediaType.WEB_PAGE:
             if not await is_enabled(sender, "text"):
                 return
-            await clone_message(app, msg, target_chat_id, topic_id, edit_id, LOG_GROUP)
+            await clone_message(app, msg, target_chat_id, topic_id, edit_id, LOG_GROUP, sender)
             return
 
         if msg.text:
             if not await is_enabled(sender, "text"):
                 return
-            await clone_text_message(app, msg, target_chat_id, topic_id, edit_id, LOG_GROUP)
+            await clone_text_message(app, msg, target_chat_id, topic_id, edit_id, LOG_GROUP, sender)
             return
 
         if msg.sticker:
@@ -632,13 +658,17 @@ async def get_msg(userbot: TelegramClient, sender: int, edit_id: int, msg_link: 
         
         # Handle file media (photo, document, video)
         file_size = get_message_file_size(msg)
-
-        # if file_size and file_size > size_limit and pro is None:
-        #     await app.edit_message_text(sender, edit_id, "**❌ 4GB Uploader not found**")
-        #     return
-
         file_name = await get_media_filename(msg)
-        edit = await app.edit_message_text(sender, edit_id, "**>Downloading...Darling 😘**")
+        
+        # Determine media type for better logging
+        m_type = "File"
+        if msg.video: m_type = "Video 🎥"
+        elif msg.photo: m_type = "Photo 📸"
+        elif msg.document: m_type = "Document 📄"
+        elif msg.audio: m_type = "Audio 🎵"
+        elif msg.voice: m_type = "Voice 🎤"
+
+        edit = await app.edit_message_text(sender, edit_id, f"🛰️ **Media Identified:** {m_type}\n📦 **Size:** {file_size / (1024*1024):.2f} MB\n\n📥 **Starting Download...**")
 
         # Optimized Download media
         if upload_method == "Telethon":
@@ -736,17 +766,44 @@ async def get_msg(userbot: TelegramClient, sender: int, edit_id: int, msg_link: 
         if edit:
             await edit.delete(1)
         
-async def clone_message(app, msg, target_chat_id, topic_id, edit_id, log_group):
-    edit = await app.edit_message_text(target_chat_id, edit_id, "Cloning...")
-    devgaganin = await app.send_message(target_chat_id, msg.text.markdown, reply_to_message_id=topic_id)
-    await devgaganin.copy(log_group)
-    await edit.delete()
+async def clone_message(app, msg, target_chat_id, topic_id, edit_id, log_group, sender):
+    # Get user configuration for cleaning
+    user_data = await odb.get_data(sender)
+    active_tag = user_data.get("active_tag", "@Chosen_Onex_bot") if user_data else "@Chosen_Onex_bot"
+    delete_words = user_data.get("delete_words", []) if user_data else []
+    replacements = user_data.get("replacement_words", {}) if user_data else {}
+    
+    # Clean the message text
+    original_text = msg.text.html if msg.text else ""
+    cleaned_text = clean_text_advanced(original_text, active_tag, delete_words, replacements)
 
-async def clone_text_message(app, msg, target_chat_id, topic_id, edit_id, log_group):
-    edit = await app.edit_message_text(target_chat_id, edit_id, "Cloning text message...")
-    devgaganin = await app.send_message(target_chat_id, msg.text.markdown, reply_to_message_id=topic_id)
-    await devgaganin.copy(log_group)
-    await edit.delete()
+    try:
+        await app.edit_message_text(sender, edit_id, "🌐 **Cloning Web Content...**")
+        devgaganin = await app.send_message(target_chat_id, cleaned_text, parse_mode=ParseMode.HTML, reply_to_message_id=topic_id)
+        await devgaganin.copy(log_group)
+    except Exception as e:
+        print(f"Web cloning failed: {e}")
+        await app.send_message(target_chat_id, msg.text.markdown, reply_to_message_id=topic_id)
+
+async def clone_text_message(app, msg, target_chat_id, topic_id, edit_id, log_group, sender):
+    # Get user configuration for cleaning
+    user_data = await odb.get_data(sender)
+    active_tag = user_data.get("active_tag", "@Chosen_Onex_bot") if user_data else "@Chosen_Onex_bot"
+    delete_words = user_data.get("delete_words", []) if user_data else []
+    replacements = user_data.get("replacement_words", {}) if user_data else {}
+    
+    # Clean the message text
+    original_text = msg.text.html if msg.text else ""
+    cleaned_text = clean_text_advanced(original_text, active_tag, delete_words, replacements)
+    
+    try:
+        await app.edit_message_text(sender, edit_id, "✨ **Applying Branding to Text...**")
+        devgaganin = await app.send_message(target_chat_id, cleaned_text, parse_mode=ParseMode.HTML, reply_to_message_id=topic_id)
+        await devgaganin.copy(log_group)
+    except Exception as e:
+        print(f"Text cloning failed: {e}")
+        # Fallback to markdown if HTML fails
+        await app.send_message(target_chat_id, msg.text.markdown, reply_to_message_id=topic_id)
 
 
 async def handle_sticker(app, msg, target_chat_id, topic_id, edit_id, log_group):
