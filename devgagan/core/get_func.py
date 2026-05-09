@@ -503,7 +503,7 @@ async def get_msg(userbot: TelegramClient, sender: int, edit_id: int, msg_link: 
         file = ''
         edit = ''
         # Extract chat and message ID for various Telegram link formats
-        if 't.me/c/' in msg_link or 't.me/b/' in msg_link or 'tg://openmessage' in msg_link:
+        if any(x in msg_link for x in ['t.me/c/', 't.me/b/', 'telegram.me/c/', 'telegram.dog/c/', 'tg://openmessage']):
             # First check if userbot is even available for private links
             if userbot is None:
                 await app.edit_message_text(sender, edit_id, "❌ **Login Required!**\n\nPrivate links require a user session. Please use /login to access this content.")
@@ -511,17 +511,23 @@ async def get_msg(userbot: TelegramClient, sender: int, edit_id: int, msg_link: 
             
             edit = await app.edit_message_text(sender, edit_id, "Processing Private Link... 🔐")
             
-            if 't.me/c/' in msg_link or 't.me/b/' in msg_link:
+            if any(x in msg_link for x in ['/c/', '/b/']):
                 parts = [p for p in msg_link.split("/") if p]
-                if 't.me/b/' in msg_link:
+                if any(x in msg_link for x in ['/b/']):
                     chat = parts[-2]
-                    msg_id = int(parts[-1]) + i
+                    msg_id = int(parts[-1].split('?')[0]) + i
                 else:
                     # Handle both standard and topic links
                     # Format: t.me/c/12345/100 or t.me/c/12345/2/100
-                    chat_val = parts[parts.index('c') + 1]
-                    chat = int('-100' + chat_val)
-                    msg_id = int(parts[-1]) + i
+                    # Find 'c' in parts and take the next part as chat_id
+                    try:
+                        c_index = parts.index('c')
+                        chat_val = parts[c_index + 1]
+                        chat = int('-100' + chat_val)
+                        msg_id = int(parts[-1].split('?')[0]) + i
+                    except (ValueError, IndexError):
+                        await app.edit_message_text(sender, edit_id, "❌ **Invalid Link Format!**")
+                        return
             elif 'tg://openmessage' in msg_link:
                 import urllib.parse
                 parsed_url = urllib.parse.urlparse(msg_link)
@@ -671,17 +677,24 @@ async def get_msg(userbot: TelegramClient, sender: int, edit_id: int, msg_link: 
         edit = await app.edit_message_text(sender, edit_id, f"🛰️ **Media Identified:** {m_type}\n📦 **Size:** {file_size / (1024*1024):.2f} MB\n\n📥 **Starting Download...**")
 
         # Optimized Download media
-        if upload_method == "Telethon":
-            file = await fast_download(
-                userbot, msg, edit, file_name,
-                lambda done, total: progress_callback(done, total, sender)
-            )
-        else:
+        try:
+            if upload_method == "Telethon":
+                file = await fast_download(
+                    userbot, msg, edit, file_name,
+                    lambda done, total: progress_callback(done, total, sender)
+                )
+            else:
+                file = await userbot.download_media(
+                    message=msg,
+                    file_name=file_name,
+                    progress=lambda done, total: progress_callback(done, total, sender)
+                )
+        except Exception as e:
+            print(f"Optimized download failed, trying standard: {e}")
             file = await userbot.download_media(
-                msg,
-                file_name=file_name,            
-                progress_args=("╔══━⚡️ Downloading ⚡️━══╗\n", edit, time.time()),
-                progress=progress_bar
+                message=msg,
+                file_name=file_name,
+                progress=lambda done, total: progress_callback(done, total, sender)
             )
         
         if not file:
