@@ -22,6 +22,7 @@ import cv2
 from pyrogram.errors import FloodWait, InviteHashInvalid, InviteHashExpired, UserAlreadyParticipant, UserNotParticipant
 from datetime import datetime as dt
 import asyncio, subprocess, re, os, time
+from PIL import Image
 async def chk_user(message, user_id):
     user = await premium_users()
     if user_id in user or user_id in OWNER_ID:
@@ -191,30 +192,95 @@ def video_metadata(file):
     default_values = {'width': 1, 'height': 1, 'duration': 1}
     try:
         vcap = cv2.VideoCapture(file)
-        if not vcap.isOpened():
-            return default_values  
-
-        width = round(vcap.get(cv2.CAP_PROP_FRAME_WIDTH))
-        height = round(vcap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        fps = vcap.get(cv2.CAP_PROP_FPS)
-        frame_count = vcap.get(cv2.CAP_PROP_FRAME_COUNT)
-
-        if fps <= 0:
-            return default_values  
-
-        duration = round(frame_count / fps)
-        if duration <= 0:
-            return default_values  
-
-        vcap.release()
-        return {'width': width, 'height': height, 'duration': duration}
-
+        if vcap.isOpened():
+            width = round(vcap.get(cv2.CAP_PROP_FRAME_WIDTH))
+            height = round(vcap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+            fps = vcap.get(cv2.CAP_PROP_FPS)
+            frame_count = vcap.get(cv2.CAP_PROP_FRAME_COUNT)
+            vcap.release()
+            
+            if fps > 0 and frame_count > 0:
+                duration = round(frame_count / fps)
+                if width > 0 and height > 0 and duration > 0:
+                    return {'width': width, 'height': height, 'duration': duration}
     except Exception as e:
-        print(f"Error in video_metadata: {e}")
+        print(f"Error in OpenCV video_metadata: {e}")
+
+    # Fallback to ffprobe
+    try:
+        import subprocess
+        # Get stream info
+        cmd = [
+            "ffprobe",
+            "-v", "error",
+            "-select_streams", "v:0",
+            "-show_entries", "stream=width,height,duration",
+            "-of", "default=noprint_wrappers=1",
+            file
+        ]
+        result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=5)
+        width, height, duration = None, None, None
+        for line in result.stdout.strip().split('\n'):
+            if '=' in line:
+                k, v = line.split('=', 1)
+                if k == 'width' and v.isdigit():
+                    width = int(v)
+                elif k == 'height' and v.isdigit():
+                    height = int(v)
+                elif k == 'duration':
+                    try:
+                        duration = round(float(v))
+                    except ValueError:
+                        pass
+                        
+        # Get format duration if stream duration is empty/invalid
+        if duration is None or duration <= 0:
+            cmd = [
+                "ffprobe",
+                "-v", "error",
+                "-show_entries", "format=duration",
+                "-of", "default=noprint_wrappers=1",
+                file
+            ]
+            result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=5)
+            for line in result.stdout.strip().split('\n'):
+                if '=' in line:
+                    k, v = line.split('=', 1)
+                    if k == 'duration':
+                        try:
+                            duration = round(float(v))
+                        except ValueError:
+                            pass
+
+        width = width or 1
+        height = height or 1
+        duration = duration or 1
+        return {'width': width, 'height': height, 'duration': duration}
+    except Exception as e:
+        print(f"Error in ffprobe fallback: {e}")
         return default_values
 
 def hhmmss(seconds):
     return time.strftime('%H:%M:%S',time.gmtime(seconds))
+
+def optimize_thumbnail(image_path):
+    try:
+        if not image_path or not os.path.exists(image_path):
+            return None
+        
+        abs_path = os.path.abspath(image_path)
+        with Image.open(abs_path) as img:
+            if img.mode != 'RGB':
+                img = img.convert('RGB')
+            # Resize preserving aspect ratio (max 320x320 for Telegram specification)
+            img.thumbnail((320, 320))
+            # Save it back as optimized JPEG (always under 200KB)
+            img.save(abs_path, "JPEG", optimize=True, quality=85)
+            
+        return abs_path
+    except Exception as e:
+        print(f"[ERROR] Failed to optimize thumbnail {image_path}: {e}")
+        return os.path.abspath(image_path) if image_path else None
 
 # REPLACE screenshot() function in devgagan/core/func.py (Line 221-257)
 
@@ -255,8 +321,9 @@ async def screenshot(video, duration, sender):
             return None
             
         if os.path.isfile(out):
-            print(f"[SUCCESS] Thumbnail created: {out}")
-            return out
+            optimized_out = optimize_thumbnail(out)
+            print(f"[SUCCESS] Thumbnail created and optimized: {optimized_out}")
+            return optimized_out
         else:
             print(f"[ERROR] Thumbnail file not created: {out}")
             return None

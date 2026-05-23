@@ -1152,6 +1152,7 @@ async def save_thumbnail(event):
     if event.photo:
         thumbnail_path = os.path.join(THUMBNAIL_DIR, f"{user_id}.jpg")
         await event.download_media(file=thumbnail_path)
+        optimize_thumbnail(thumbnail_path)
         await event.respond('✅ **Custom thumbnail saved successfully!**')
     else:
         await event.respond('❌ Please send a **photo** to set it as a thumbnail.')

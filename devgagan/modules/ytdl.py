@@ -28,7 +28,7 @@ from pyrogram import Client,filters
 from telethon import events
 from telethon.sync import TelegramClient
 from telethon.tl.types import DocumentAttributeVideo
-from devgagan.core.func import screenshot, video_metadata, progress_bar
+from devgagan.core.func import screenshot, video_metadata, progress_bar, optimize_thumbnail
 from telethon.tl.functions.messages import EditMessageRequest
 from devgagantools import fast_upload
 from concurrent.futures import ThreadPoolExecutor
@@ -52,6 +52,7 @@ def d_thumbnail(thumbnail_url, save_path):
         with open(save_path, 'wb') as f:
             for chunk in response.iter_content(chunk_size=8192):
                 f.write(chunk)
+        optimize_thumbnail(save_path)
         return save_path
     except requests.exceptions.RequestException as e:
         logger.error(f"Failed to download thumbnail: {e}")
@@ -64,6 +65,7 @@ async def download_thumbnail_async(url, path):
             if response.status == 200:
                 with open(path, 'wb') as f:
                     f.write(await response.read())
+                optimize_thumbnail(path)
  
  
 async def extract_audio_async(ydl_opts, url):
