@@ -20,7 +20,7 @@ import asyncio
 from pyrogram import filters, Client
 from devgagan import app, task_semaphore
 from config import API_ID, API_HASH, FREEMIUM_LIMIT, PREMIUM_LIMIT, OWNER_ID
-from devgagan.core.get_func import get_msg
+from devgagan.core.get_func import get_msg, save_user_data, load_user_data
 from devgagan.core.func import *
 from devgagan.core.mongo import db
 from pyrogram.errors import FloodWait
@@ -180,22 +180,51 @@ async def batch_link(_, message):
         )
         return
 
+    # Check if they have saved progress
+    last_url = load_user_data(user_id, "last_batch_url")
+    if last_url:
+        buttons = [
+            [InlineKeyboardButton("▶️ Continue Last Batch", callback_data="resume_batch")],
+            [InlineKeyboardButton("🆕 Start New Batch", callback_data="new_batch")]
+        ]
+        await app.send_message(
+            user_id,
+            f"Found previous batch progress! 📂\n\n🔗 **Last URL:** `{last_url}`\n\nWould you like to continue from this point or start a new batch?",
+            reply_markup=InlineKeyboardMarkup(buttons)
+        )
+        return
+
+    await prompt_new_batch(user_id, message)
+
+
+@app.on_callback_query(filters.regex(r"^resume_batch$|^new_batch$"))
+async def handle_batch_choice(_, query):
+    user_id = query.from_user.id
+    choice = query.data
+    await query.message.delete()
+    
+    if choice == "new_batch":
+        await prompt_new_batch(user_id, query.message)
+    elif choice == "resume_batch":
+        await prompt_resume_batch(user_id, query.message)
+
+
+async def prompt_new_batch(user_id, message):
     freecheck = await chk_user(message, user_id)
     if freecheck == 1 and FREEMIUM_LIMIT == 0 and user_id not in OWNER_ID and not await is_user_verified(user_id):
-        await message.reply("Freemium service is currently not available. Upgrade to premium for access.")
+        await app.send_message(user_id, "Freemium service is currently not available. Upgrade to premium for access.")
         return
 
     max_batch_size = FREEMIUM_LIMIT if freecheck == 1 else PREMIUM_LIMIT
 
     # Start link input
     for attempt in range(3):
-    # Send image with caption
         await app.send_photo(
-            message.chat.id,
-            photo="https://i.postimg.cc/BXkchVpY/image.jpg",  # Replace with your image URL
+            user_id,
+            photo="https://i.postimg.cc/BXkchVpY/image.jpg",
             caption="Just Copy Post Link And Send it To Me.\n\nजहाँ से शुरू करना है उस पोस्ट का लिंक भेजो\n\nMake sure the link is correct!"
         )
-        start = await app.ask(message.chat.id, "🎯 Send The Link For Where I Need To Start Process From \n\n> You Have Only 3 Tries")
+        start = await app.ask(user_id, "🎯 Send The Link For Where I Need To Start Process From \n\n> You Have Only 3 Tries")
         start_id = start.text.strip().rstrip('/')
         
         # Clean query parameters except for tg:// openmessage
@@ -222,14 +251,14 @@ async def batch_link(_, message):
                 base_url = '/'.join(start_id.split('/')[:-1])
                 is_tg_openmessage = False
                 break
-        await app.send_message(message.chat.id, "Invalid link. Please send again ...")
+        await app.send_message(user_id, "Invalid link. Please send again ...")
     else:
-        await app.send_message(message.chat.id, "Maximum attempts exceeded. Try later.")
+        await app.send_message(user_id, "Maximum attempts exceeded. Try later.")
         return
 
     # Number of messages input
     for attempt in range(3):
-        num_messages = await app.ask(message.chat.id, f"How many messages do you want to process? 🌝\n> Max limit {max_batch_size}")
+        num_messages = await app.ask(user_id, f"How many messages do you want to process? 🌝\n> Max limit {max_batch_size}")
         try:
             cl = int(num_messages.text.strip())
             if 1 <= cl <= max_batch_size:
@@ -237,19 +266,83 @@ async def batch_link(_, message):
             raise ValueError()
         except ValueError:
             await app.send_message(
-                message.chat.id, 
+                user_id, 
                 f"Invalid number. Please enter a number between 1 and {max_batch_size}."
             )
     else:
-        await app.send_message(message.chat.id, "Maximum attempts exceeded. Try later.")
+        await app.send_message(user_id, "Maximum attempts exceeded. Try later.")
         return
 
-    # Validate and interval check
+    await execute_batch(user_id, base_url, cs, cl, is_tg_openmessage, freecheck)
+
+
+async def prompt_resume_batch(user_id, message):
+    freecheck = await chk_user(message, user_id)
+    if freecheck == 1 and FREEMIUM_LIMIT == 0 and user_id not in OWNER_ID and not await is_user_verified(user_id):
+        await app.send_message(user_id, "Freemium service is currently not available. Upgrade to premium for access.")
+        return
+
+    max_batch_size = FREEMIUM_LIMIT if freecheck == 1 else PREMIUM_LIMIT
+    last_url = load_user_data(user_id, "last_batch_url")
+    if not last_url:
+        await app.send_message(user_id, "No saved batch progress found.")
+        return
+
+    # Parse saved URL
+    if 'tg://' not in last_url:
+        last_url = last_url.split('?')[0]
+
+    is_tg_openmessage = False
+    if 'tg://openmessage' in last_url:
+        import urllib.parse
+        parsed_url = urllib.parse.urlparse(last_url)
+        params = urllib.parse.parse_qs(parsed_url.query)
+        msg_id_val = params.get("message_id", [None])[0]
+        if msg_id_val and msg_id_val.isdigit():
+            cs = int(msg_id_val)
+            remaining_params = "&".join([f"{k}={v[0]}" for k, v in params.items() if k != 'message_id'])
+            base_url = f"tg://openmessage?{remaining_params}"
+            is_tg_openmessage = True
+        else:
+            await app.send_message(user_id, "Failed to parse saved batch link.")
+            return
+    else:
+        s = last_url.split("/")[-1]
+        if s.isdigit():
+            cs = int(s)
+            base_url = '/'.join(last_url.split('/')[:-1])
+            is_tg_openmessage = False
+        else:
+            await app.send_message(user_id, "Failed to parse saved batch link.")
+            return
+
+    # Number of messages input
+    for attempt in range(3):
+        num_messages = await app.ask(user_id, f"How many messages do you want to process starting from message ID `{cs}`? 🌝\n> Max limit {max_batch_size}")
+        try:
+            cl = int(num_messages.text.strip())
+            if 1 <= cl <= max_batch_size:
+                break
+            raise ValueError()
+        except ValueError:
+            await app.send_message(
+                user_id, 
+                f"Invalid number. Please enter a number between 1 and {max_batch_size}."
+            )
+    else:
+        await app.send_message(user_id, "Maximum attempts exceeded. Try later.")
+        return
+
+    await execute_batch(user_id, base_url, cs, cl, is_tg_openmessage, freecheck)
+
+
+async def execute_batch(user_id, base_url, cs, cl, is_tg_openmessage, freecheck):
+    # Interval check
     can_proceed, response_message = await check_interval(user_id, freecheck)
     if not can_proceed:
-        await message.reply(response_message)
+        await app.send_message(user_id, response_message)
         return
-        
+
     join_button = InlineKeyboardButton("Join Channel", url="https://t.me/+7R-7p7jVoz9mM2M1")
     stop_button = InlineKeyboardButton("🚫 Stop Batch", callback_data=f"stop_batch_{user_id}")
     keyboard = InlineKeyboardMarkup([[join_button], [stop_button]])
@@ -288,6 +381,9 @@ async def batch_link(_, message):
             if is_special and not userbot:
                 fail_count += 1
                 continue
+            
+            # Save batch progress to MongoDB before processing so they can continue from the exact failure/stop point
+            save_user_data(user_id, "last_batch_url", url)
             
             try:
                 # Process the message
@@ -331,14 +427,23 @@ async def batch_link(_, message):
                     pass
 
         final_status = "completed" if users_loop.get(user_id) else "stopped"
+        
+        # If successfully completed, save the next URL index for subsequent batches
+        if final_status == "completed":
+            if is_tg_openmessage:
+                next_url = f"{base_url}&message_id={cs + cl}"
+            else:
+                next_url = f"{base_url}/{cs + cl}"
+            save_user_data(user_id, "last_batch_url", next_url)
+            
         await pin_msg.edit_text(
             f"✅ **Batch {final_status}!**\n\n✨ **Success:** {success_count}\n❌ **Failed:** {fail_count}\n📊 **Total:** {cl}\n\n**__Powered by CHOSEN ONE ⚝__**",
             reply_markup=InlineKeyboardMarkup([[join_button]])
         )
-        await app.send_message(message.chat.id, f"Batch process {final_status}! ✨\nSuccess: {success_count} | Failed: {fail_count}")
+        await app.send_message(user_id, f"Batch process {final_status}! ✨\nSuccess: {success_count} | Failed: {fail_count}")
 
     except Exception as e:
-        await app.send_message(message.chat.id, f"Critical Error: {e}")
+        await app.send_message(user_id, f"Critical Error: {e}")
     finally:
         users_loop.pop(user_id, None)
         if userbot:
