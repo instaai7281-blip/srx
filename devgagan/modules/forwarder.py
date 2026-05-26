@@ -10,9 +10,14 @@ from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from devgagan.core.func import chk_user
 from devgagan.core.mongo import db
 
-@app.on_message(filters.command("logforward") & filters.private)
+@app.on_message(filters.command("logforward"))
 async def log_forward_cmd(_, message):
-    user_id = message.chat.id
+    # Always authorize and prompt using the sender's user ID so it works in groups/channels and private DMs
+    if not message.from_user:
+        await message.reply("❌ **Error:** This command must be sent by a user.")
+        return
+        
+    user_id = message.from_user.id
     
     # Check authorization (Owner or Premium User)
     if await chk_user(message, user_id) != 0:
@@ -25,42 +30,64 @@ async def log_forward_cmd(_, message):
         return
 
     # 1. Ask for Target Identifier (User ID or Username)
-    target_prompt = await app.ask(
-        user_id,
-        "🎯 **Send the User ID or Username of the target person:**\n\n*(e.g., `8014313443` or `_Himanshu_`)*\n\nSend `/cancel` to abort."
-    )
+    try:
+        target_prompt = await app.ask(
+            user_id,
+            "🎯 **Send the User ID or Username of the target person:**\n\n*(e.g., `8014313443` or `_Himanshu_`)*\n\nSend `/cancel` to abort.",
+            timeout=300
+        )
+    except Exception as e:
+        await message.reply(
+            "❌ **Interactive Prompt Failed:**\n"
+            "Please start the bot first in private DM (@" + (await app.get_me()).username + ") "
+            "so I can send you the configuration prompts!"
+        )
+        return
+
     if target_prompt.text == "/cancel":
-        await message.reply("❌ Process cancelled.")
+        await app.send_message(user_id, "❌ Process cancelled.")
         return
         
     target_val = target_prompt.text.strip()
     if not target_val:
-        await message.reply("❌ Invalid input. Process cancelled.")
+        await app.send_message(user_id, "❌ Invalid input. Process cancelled.")
         return
 
     # 2. Ask for Destination Channel/Group ID
-    dest_prompt = await app.ask(
-        user_id,
-        "📥 **Send the Destination Channel/Group ID:**\n\n*(Must start with `-100`)*\n\nSend `/cancel` to abort."
-    )
+    try:
+        dest_prompt = await app.ask(
+            user_id,
+            "📥 **Send the Destination Channel/Group ID:**\n\n*(Must start with `-100`)*\n\nSend `/cancel` to abort.",
+            timeout=300
+        )
+    except Exception as e:
+        await app.send_message(user_id, f"❌ Session expired or error: `{e}`")
+        return
+
     if dest_prompt.text == "/cancel":
-        await message.reply("❌ Process cancelled.")
+        await app.send_message(user_id, "❌ Process cancelled.")
         return
         
     dest_chat_str = dest_prompt.text.strip()
     try:
         dest_chat_id = int(dest_chat_str)
     except ValueError:
-        await message.reply("❌ Invalid chat ID format. Process cancelled.")
+        await app.send_message(user_id, "❌ Invalid chat ID format. Process cancelled.")
         return
 
     # 3. Ask for Scraping Depth
-    depth_prompt = await app.ask(
-        user_id,
-        "🔍 **How many messages should I scan in the log channel?**\n\n*(Recommend 100, 500, or 1000)*\n\nSend `/cancel` to abort."
-    )
+    try:
+        depth_prompt = await app.ask(
+            user_id,
+            "🔍 **How many messages should I scan in the log channel?**\n\n*(Recommend 100, 500, or 1000)*\n\nSend `/cancel` to abort.",
+            timeout=300
+        )
+    except Exception as e:
+        await app.send_message(user_id, f"❌ Session expired or error: `{e}`")
+        return
+
     if depth_prompt.text == "/cancel":
-        await message.reply("❌ Process cancelled.")
+        await app.send_message(user_id, "❌ Process cancelled.")
         return
         
     try:
@@ -68,10 +95,10 @@ async def log_forward_cmd(_, message):
         if depth <= 0:
             raise ValueError()
     except ValueError:
-        await message.reply("❌ Invalid scan depth. Process cancelled.")
+        await app.send_message(user_id, "❌ Invalid scan depth. Process cancelled.")
         return
 
-    status_msg = await message.reply("⌛ **Initializing scan in the log channel...**")
+    status_msg = await app.send_message(user_id, "⌛ **Initializing scan in the log channel...**")
 
     success_count = 0
     fail_count = 0
