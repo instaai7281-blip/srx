@@ -251,7 +251,7 @@ async def upload_media(sender, target_chat_id, file, caption, edit, topic_id, th
         # ✅ Generate cleaned caption for user post
         if file.lower().endswith('.pdf'):
             filename = os.path.basename(file)
-            caption = f"> **{filename}**\n> **➪ @PDF_X9 🦋 ❞**"
+            caption = f"> **{filename}**\n>\n> **➪ @PDF_X9 🦋 ❞**"
         else:
             caption = format_caption(caption, sender, custom_caption=None)
 
@@ -581,7 +581,7 @@ async def get_msg(userbot: TelegramClient, sender: int, edit_id: int, msg_link: 
 
         if file and str(file).lower().endswith('.pdf'):
             filename = os.path.basename(file)
-            caption = f"> **{filename}**\n> **➪ @PDF_X9 🦋 ❞**"
+            caption = f"> **{filename}**\n>\n> **➪ @PDF_X9 🦋 ❞**"
 
         # Apply PDF Watermark if applicable
         if file and str(file).lower().endswith('.pdf'):
@@ -841,7 +841,7 @@ async def copy_message_with_chat_id(app, userbot, sender, chat_id, message_id, e
             if ext.lower() != '.pdf':
                 ext = '.pdf'
             formatted_filename = f"{base_name.strip()} @PDF_X9{ext}".strip()
-            final_caption = f"> **{formatted_filename}**\n> **➪ @PDF_X9 🦋 ❞**"
+            final_caption = f"> **{formatted_filename}**\n>\n> **➪ @PDF_X9 🦋 ❞**"
 
         topic_id = None
         if '/' in str(target_chat_id):
@@ -896,7 +896,7 @@ async def copy_message_with_chat_id(app, userbot, sender, chat_id, message_id, e
 
             if file and str(file).lower().endswith('.pdf'):
                 filename = os.path.basename(file)
-                final_caption = f"> **{filename}**\n> **➪ @PDF_X9 🦋 ❞**"
+                final_caption = f"> **{filename}**\n>\n> **➪ @PDF_X9 🦋 ❞**"
             file_size = os.path.getsize(file)
 
             if msg.photo:
@@ -951,7 +951,7 @@ async def send_media_message(app, target_chat_id, msg, caption, topic_id):
             if ext.lower() != '.pdf':
                 ext = '.pdf'
             formatted_filename = f"{base_name.strip()} @PDF_X9{ext}".strip()
-            caption = f"> **{formatted_filename}**\n> **➪ @PDF_X9 🦋 ❞**"
+            caption = f"> **{formatted_filename}**\n>\n> **➪ @PDF_X9 🦋 ❞**"
         elif caption:
             # If caption exists → keep it same, just replace links if needed
             caption = re.sub(
