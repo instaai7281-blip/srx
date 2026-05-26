@@ -3,12 +3,35 @@ import time
 import re
 from datetime import timedelta
 from pyrogram import filters, Client
-from devgagan import app
+from devgagan import app, get_client
 from config import OWNER_ID, LOG_GROUP
 from pyrogram.errors import FloodWait
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from devgagan.core.func import chk_user
 from devgagan.core.mongo import db
+
+def parse_tg_link(link):
+    try:
+        parts = [p for p in link.split("/") if p]
+        if 't.me/c/' in link or 't.me/b/' in link:
+            if 't.me/b/' in link:
+                chat = parts[-2]
+                msg_id = int(parts[-1])
+            else:
+                chat = int('-100' + parts[parts.index('c') + 1])
+                msg_id = int(parts[-1])
+            return chat, msg_id
+        elif 't.me/' in link or 'telegram.me/' in link or 'telegram.dog/' in link:
+            domain = "t.me/" if "t.me/" in link else "telegram.me/" if "telegram.me/" in link else "telegram.dog/"
+            subparts = [p for p in link.split(domain)[1].split("/") if p]
+            chat = subparts[0]
+            if chat.isdigit():
+                chat = int("-100" + chat)
+            msg_id = int(subparts[-1])
+            return chat, msg_id
+    except Exception as e:
+        print(f"Error parsing link {link}: {e}")
+    return None, None
 
 @app.on_message(filters.command("logforward"))
 async def log_forward_cmd(_, message):
@@ -22,11 +45,6 @@ async def log_forward_cmd(_, message):
     # Check authorization (Owner or Premium User)
     if await chk_user(message, user_id) != 0:
         await message.reply("❌ **Access Denied:** Only premium users or the bot owner can use this command.")
-        return
-
-    # Check if LOG_GROUP is configured
-    if not LOG_GROUP:
-        await message.reply("❌ **Error:** `LOG_GROUP` is not configured in the bot environment variables.")
         return
 
     # 1. Ask for Target Identifier (User ID or Username)
@@ -75,30 +93,28 @@ async def log_forward_cmd(_, message):
         await app.send_message(user_id, "❌ Invalid chat ID format. Process cancelled.")
         return
 
-    # 3. Ask for Scraping Depth
+    # 3. Ask for Starting Post Link
     try:
-        depth_prompt = await app.ask(
+        link_prompt = await app.ask(
             user_id,
-            "🔍 **How many messages should I scan in the log channel?**\n\n*(Recommend 100, 500, or 1000)*\n\nSend `/cancel` to abort.",
+            "🔗 **Send the Start Post Link from the log channel:**\n\n*(I will only scan messages newer than this post for maximum speed)*\n\nSend `/cancel` to abort.",
             timeout=300
         )
     except Exception as e:
         await app.send_message(user_id, f"❌ Session expired or error: `{e}`")
         return
 
-    if depth_prompt.text == "/cancel":
+    if link_prompt.text == "/cancel":
         await app.send_message(user_id, "❌ Process cancelled.")
         return
-        
-    try:
-        depth = int(depth_prompt.text.strip())
-        if depth <= 0:
-            raise ValueError()
-    except ValueError:
-        await app.send_message(user_id, "❌ Invalid scan depth. Process cancelled.")
+
+    start_link = link_prompt.text.strip()
+    log_group_chat, start_msg_id = parse_tg_link(start_link)
+    if not log_group_chat or not start_msg_id:
+        await app.send_message(user_id, "❌ **Invalid link format.** Must be a valid Telegram message link. Process cancelled.")
         return
 
-    status_msg = await app.send_message(user_id, "⌛ **Initializing scan in the log channel...**")
+    status_msg = await app.send_message(user_id, "⌛ **Initializing scanning session using user session...**")
 
     success_count = 0
     fail_count = 0
@@ -106,29 +122,24 @@ async def log_forward_cmd(_, message):
     start_time = time.time()
     
     try:
-        # Resolve target identifiers for matching
-        target_val_clean = target_val.replace("@", "").lower().strip()
-        # Strip underscores and spaces to ensure high-accuracy fuzzy matching
-        target_val_fuzzy = re.sub(r'[\s_]+', '', target_val_clean)
+        # Use user session to bypass BOT_METHOD_INVALID
+        client_to_use = get_client() or app
         
-        # LOG_GROUP can be a string or integer
-        log_group_chat = int(LOG_GROUP) if str(LOG_GROUP).strip().lstrip('-').isdigit() else LOG_GROUP
-        
-        # Verify bot access to LOG_GROUP
+        # Verify access to LOG_GROUP
         try:
-            await app.get_chat(log_group_chat)
+            await client_to_use.get_chat(log_group_chat)
         except Exception as e:
-            await status_msg.edit(f"❌ **Cannot access Log Group:** `{e}`\n\nPlease make sure the bot has access/admin in the log group channel.")
+            await status_msg.edit(f"❌ **Cannot access Log Group using user session:** `{e}`\n\nPlease make sure your user account has joined/access to the log group.")
             return
 
-        # Verify bot access to target chat
+        # Verify access to target chat (using app/bot or user session)
         try:
             await app.get_chat(dest_chat_id)
         except Exception as e:
             await status_msg.edit(f"❌ **Cannot access Destination Channel:** `{e}`\n\nPlease make sure the bot is an **Admin** in the target channel.")
             return
 
-        await status_msg.edit(f"🔍 **Scanning last {depth} messages in Log Group...**")
+        await status_msg.edit(f"🔍 **Scanning Log Group starting from message ID {start_msg_id}...**")
         
         # Fetch user filters
         user_data = await db.get_data(user_id) or {}
@@ -136,13 +147,18 @@ async def log_forward_cmd(_, message):
         
         # Fetch log group messages
         messages_scanned = 0
-        async for msg in app.get_chat_history(log_group_chat, limit=depth):
+        
+        # We scan the history starting from the newest. We stop immediately once message ID is less than start_msg_id
+        async for msg in client_to_use.get_chat_history(log_group_chat, limit=10000):
+            if msg.id < start_msg_id:
+                break
+                
             messages_scanned += 1
-            if messages_scanned % 10 == 0 or messages_scanned == depth:
+            if messages_scanned % 10 == 0:
                 try:
                     await status_msg.edit(
                         f"🔍 **Scanning Log Group...**\n\n"
-                        f"📊 **Scanned:** `{messages_scanned}/{depth}`\n"
+                        f"📊 **Scanned:** `{messages_scanned}`\n"
                         f"✨ **Forwarded:** `{success_count}`\n"
                         f"⏭️ **Skipped:** `{skipped_count}`\n"
                         f"❌ **Failed:** `{fail_count}`"
@@ -157,6 +173,10 @@ async def log_forward_cmd(_, message):
                 # Remove underscores and spaces from log text to perform high-accuracy fuzzy matching
                 msg_text_fuzzy = re.sub(r'[\s_]+', '', msg_text_clean)
                 
+                # Resolve target identifiers for matching
+                target_val_clean = target_val.replace("@", "").lower().strip()
+                target_val_fuzzy = re.sub(r'[\s_]+', '', target_val_clean)
+
                 # Check fuzzy match
                 if (target_val_clean in msg_text_clean) or (target_val_fuzzy and target_val_fuzzy in msg_text_fuzzy):
                     parent_media_id = None
@@ -174,7 +194,7 @@ async def log_forward_cmd(_, message):
                     if parent_media_id:
                         try:
                             # Fetch the actual media message to evaluate its type against filters
-                            media_msg = await app.get_messages(log_group_chat, parent_media_id)
+                            media_msg = await client_to_use.get_messages(log_group_chat, parent_media_id)
                             
                             # Determine media type
                             media_type = None
@@ -194,12 +214,21 @@ async def log_forward_cmd(_, message):
                                 skipped_count += 1
                                 continue
                             
-                            # Forward the parent media message to the destination
-                            await app.copy_message(
-                                chat_id=dest_chat_id,
-                                from_chat_id=log_group_chat,
-                                message_id=parent_media_id
-                            )
+                            # Forward the parent media message to the destination (using user session or app)
+                            try:
+                                await app.copy_message(
+                                    chat_id=dest_chat_id,
+                                    from_chat_id=log_group_chat,
+                                    message_id=parent_media_id
+                                )
+                            except Exception:
+                                # Fallback to copy via user session client if bot fails
+                                await client_to_use.copy_message(
+                                    chat_id=dest_chat_id,
+                                    from_chat_id=log_group_chat,
+                                    message_id=parent_media_id
+                                )
+                                
                             success_count += 1
                             # Delay to prevent FloodWait rate limits
                             await asyncio.sleep(1.2)
@@ -224,6 +253,7 @@ async def log_forward_cmd(_, message):
             f"✅ **Log Forwarding Completed!**\n\n"
             f"👤 **Filter:** `{target_val}`\n"
             f"📥 **Destination:** `{dest_chat_id}`\n"
+            f"📊 **Total Scanned:** `{messages_scanned}`\n"
             f"✨ **Successfully Forwarded:** `{success_count}`\n"
             f"⏭️ **Skipped (Filters):** `{skipped_count}`\n"
             f"❌ **Failed:** `{fail_count}`\n"
@@ -232,4 +262,5 @@ async def log_forward_cmd(_, message):
         
     except Exception as e:
         await status_msg.edit(f"❌ **An error occurred during log forwarding:** `{str(e)}`")
+
 
