@@ -525,7 +525,7 @@ async def get_msg(userbot: TelegramClient, sender: int, edit_id: int, msg_link: 
                 await edit.edit("🔒 **Protected Content Detected**\n\nThis channel has 'Restrict Saving Content' enabled. Only users who have **logged in** via /login can download this. Please login and try again.")
                 return
         
-        target_chat_id = user_chat_ids.get(message.chat.id, message.chat.id)
+        target_chat_id = get_target_chat_id(message.chat.id)
         topic_id = None
         if '/' in str(target_chat_id):
             target_chat_id, topic_id = map(int, target_chat_id.split('/', 1))
@@ -797,7 +797,7 @@ async def download_user_stories(userbot, chat_id, msg_id, edit, sender):
         await edit.edit(f"Error: {e}")
         
 async def copy_message_with_chat_id(app, userbot, sender, chat_id, message_id, edit):
-    target_chat_id = user_chat_ids.get(sender, sender)
+    target_chat_id = get_target_chat_id(sender)
     file = None
     result = None
     size_limit = 2 * 1024 * 1024 * 1024  # 2 GB size limit
@@ -1107,6 +1107,16 @@ def format_caption(original_caption, sender, custom_caption):
 # Define a dictionary to store user chat IDs
 user_chat_ids = {}
 
+def get_target_chat_id(user_id):
+    if user_id in user_chat_ids:
+        return user_chat_ids[user_id]
+    chat_id = load_user_data(user_id, "target_chat_id", None)
+    if chat_id:
+        # If found, try parsing topic ID if it's stored in db as a string like "chat_id/topic_id"
+        user_chat_ids[user_id] = chat_id
+        return chat_id
+    return user_id
+
 def load_user_data(user_id, key, default_value=None):
     try:
         user_data = collection.find_one({"_id": user_id})
@@ -1297,7 +1307,8 @@ async def callback_query_handler(event):
                     "delete_words": "",
                     "replacement_words": "",
                     "watermark_text": "",
-                    "duration_limit": ""
+                    "duration_limit": "",
+                    "target_chat_id": ""
                 }}
             )
             
@@ -1307,7 +1318,8 @@ async def callback_query_handler(event):
                     "delete_words": "",
                     "replacement_words": "",
                     "watermark_text": "",
-                    "duration_limit": ""
+                    "duration_limit": "",
+                    "target_chat_id": ""
                 }}
             )            
             user_chat_ids.pop(user_id, None)
@@ -1362,6 +1374,7 @@ async def handle_user_input(event):
             try:
                 chat_id = event.text
                 user_chat_ids[user_id] = chat_id
+                save_user_data(user_id, "target_chat_id", chat_id)
                 await event.respond("Chat ID set successfully! ✅ Now i will Forward All Content in That Chat")
             except ValueError:
                 await event.respond("Invalid chat ID! Send valid chat id starting with -100xxxxxxxx")
@@ -1453,7 +1466,7 @@ async def handle_large_file(file, sender, edit, caption):
     print("4GB connector found.")
     await edit.edit('**__ ✅ 4GB trigger connected...__**\n\n')
     
-    target_chat_id = user_chat_ids.get(sender, sender)
+    target_chat_id = get_target_chat_id(sender)
     file_extension = str(file).split('.')[-1].lower()
     metadata = video_metadata(file)
     duration = metadata['duration']
