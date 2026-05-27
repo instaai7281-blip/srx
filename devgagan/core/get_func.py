@@ -130,8 +130,8 @@ def clean_filename(text, user_tag=""):
 
 
 # MongoDB database name and collection name
-DB_NAME = "smart_users"
-COLLECTION_NAME = "super_user"
+DB_NAME = "user_data"
+COLLECTION_NAME = "users_data_db"
 
 VIDEO_EXTENSIONS = ['mp4', 'mov', 'avi', 'mkv', 'flv', 'wmv', 'webm', 'mpg', 'mpeg', '3gp', 'ts', 'm4v', 'f4v', 'vob']
 DOCUMENT_EXTENSIONS = ['pdf', 'docs']
@@ -253,7 +253,7 @@ async def upload_media(sender, target_chat_id, file, caption, edit, topic_id, th
             filename = os.path.basename(file)
             caption = f"> **{filename}**\n\n> **➪ @PDF_X9 🦋 ❞**"
         else:
-            caption = format_caption(caption, sender, custom_caption=None)
+            caption = format_caption(caption, sender, custom_caption=None, filename=os.path.basename(file))
 
         # ✅ Generate log caption separately
         user = await app.get_users(sender)
@@ -773,7 +773,12 @@ async def get_final_caption(msg, sender):
     
     # Add custom caption if present
     custom_caption = get_user_caption_preference(sender)
-    final_caption = f"{original_caption}\n\n{custom_caption}" if custom_caption else original_caption
+    
+    # Get filename
+    filename = await get_media_filename(msg)
+    
+    # Apply placeholders
+    final_caption = apply_custom_caption_placeholders(custom_caption, original_caption, filename)
 
     # ✅ Remove unwanted branding and random garbage texts
     final_caption = re.sub(r'(?i)[*_]*team[\s_\-\.]*jnc[*_]*', '', final_caption)
@@ -874,7 +879,8 @@ async def copy_message_with_chat_id(app, userbot, sender, chat_id, message_id, e
             return False
 
         custom_caption = get_user_caption_preference(sender)
-        final_caption = format_caption(msg.caption or '', sender, custom_caption)
+        filename = await get_media_filename(msg)
+        final_caption = format_caption(msg.caption or '', sender, custom_caption, filename=filename)
         
         # Force blockquote tag for PDF files
         if msg.document and ((msg.document.file_name and msg.document.file_name.lower().endswith('.pdf')) or msg.document.mime_type == 'application/pdf'):
@@ -932,7 +938,8 @@ async def copy_message_with_chat_id(app, userbot, sender, chat_id, message_id, e
                 return True
 
             custom_caption = get_user_caption_preference(sender)
-            final_caption = format_caption(msg.caption.markdown if msg.caption else "", sender, custom_caption)
+            filename = await get_media_filename(msg)
+            final_caption = format_caption(msg.caption.markdown if msg.caption else "", sender, custom_caption, filename=filename)
             
             file = await userbot.download_media(
                 msg,
@@ -1073,7 +1080,7 @@ def replace_fancy_and_emoji(text: str) -> str:
 
     return ''.join(result)
 
-def format_caption(original_caption, sender, custom_caption):
+def format_caption(original_caption, sender, custom_caption, filename=None):
     delete_words = load_delete_words(sender)
     replacements = load_replacement_words(sender)
 
@@ -1147,9 +1154,11 @@ def format_caption(original_caption, sender, custom_caption):
     original_caption = original_caption.replace("📕", "📓")
     original_caption = original_caption.replace("📽️", "🍀")
 
-    # ✅ Append custom caption if exists
-    if custom_caption:
-        return f"{original_caption}\n\n__**{custom_caption}**__"
+    if not custom_caption:
+        custom_caption = get_user_caption_preference(sender)
+
+    # Apply placeholders
+    original_caption = apply_custom_caption_placeholders(custom_caption, original_caption, filename)
     return original_caption
 
 # ------------------------ Button Mode Editz FOR SETTINGS ----------------------------
@@ -1222,10 +1231,42 @@ async def set_rename_command(user_id, custom_rename_tag):
 
 get_user_rename_preference = lambda user_id: user_rename_preferences.get(str(user_id), '⛥ @II_LevelUp_II')
 
-async def set_caption_command(user_id, custom_caption):
-    user_caption_preferences[str(user_id)] = custom_caption
+def get_user_caption_preference(user_id):
+    try:
+        user_data = collection.find_one({"_id": int(user_id)})
+        if not user_data:
+            user_data = collection.find_one({"_id": str(user_id)})
+        if user_data:
+            # Check if custom caption is enabled (defaults to True)
+            if user_data.get("caption_enabled", True):
+                return user_data.get("caption", "")
+    except Exception as e:
+        print(f"Error getting user caption preference: {e}")
+    return ""
 
-get_user_caption_preference = lambda user_id: user_caption_preferences.get(str(user_id), '')
+def apply_custom_caption_placeholders(custom_caption, original_caption, filename):
+    if not custom_caption:
+        return original_caption
+    
+    # Clean original filename for display
+    filename_clean = filename or ""
+    if "." in filename_clean:
+        filename_clean = ".".join(filename_clean.split(".")[:-1])
+    
+    # Check for placeholders
+    has_caption_placeholder = "{caption}" in custom_caption
+    has_filename_placeholder = "{filename}" in custom_caption
+    
+    if has_caption_placeholder or has_filename_placeholder:
+        formatted = custom_caption
+        formatted = formatted.replace("{filename}", filename_clean)
+        formatted = formatted.replace("{caption}", original_caption or "")
+        return formatted
+    else:
+        # Backward compatibility: append to original caption
+        if original_caption:
+            return f"{original_caption}\n\n{custom_caption}"
+        return custom_caption
 
 # Initialize the dictionary to store user sessions
 
