@@ -2,7 +2,7 @@ import asyncio
 from pyrogram import filters, enums
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup, CallbackQuery
 from devgagan import app
-from devgagan.core.func import chk_user
+from config import OWNER_ID
 
 @app.on_message(filters.command("deleteall"))
 async def delete_all_cmd(_, message):
@@ -16,12 +16,12 @@ async def delete_all_cmd(_, message):
     # 2. Check authorization of the sender (if sent by a user)
     if message.from_user:
         user_id = message.from_user.id
-        if await chk_user(message, user_id) != 0:
+        if user_id not in OWNER_ID:
             # Check if they are admin in this chat
             try:
                 member = await app.get_chat_member(chat_id, user_id)
                 if member.status not in [enums.ChatMemberStatus.OWNER, enums.ChatMemberStatus.ADMINISTRATOR]:
-                    await message.reply("❌ **Access Denied:** Only administrators or the bot owner can use this command.")
+                    await message.reply("❌ **Access Denied:** Only administrators can use this command.")
                     return
             except Exception:
                 await message.reply("❌ **Access Denied:** You are not authorized here.")
@@ -47,9 +47,9 @@ async def delete_all_callback(_, callback_query: CallbackQuery):
     user_id = callback_query.from_user.id
     chat_id = callback_query.message.chat.id
     
-    # Verify clicker's rights (Must be owner, premium, or chat administrator)
+    # Verify clicker's rights (Must be chat owner, chat administrator, or global bot owner)
     authorized = False
-    if await chk_user(callback_query.message, user_id) == 0:
+    if user_id in OWNER_ID:
         authorized = True
     else:
         try:
@@ -60,7 +60,7 @@ async def delete_all_callback(_, callback_query: CallbackQuery):
             pass
 
     if not authorized:
-        await callback_query.answer("❌ You are not authorized to perform this action!", show_alert=True)
+        await callback_query.answer("❌ Only administrators of this chat can perform this action!", show_alert=True)
         return
 
     if callback_query.data == "cancel_delete_all":
@@ -70,40 +70,29 @@ async def delete_all_callback(_, callback_query: CallbackQuery):
     # Confirm delete all
     await callback_query.message.edit_text("⌛ **Initializing mass deletion...**")
     
-    deleted_count = 0
-    message_ids = []
-    
     try:
-        # Scan and delete all history
-        async for msg in app.get_chat_history(chat_id, limit=5000):
-            # Skip the confirmation message itself
-            if msg.id == callback_query.message.id:
-                continue
-                
-            message_ids.append(msg.id)
-            
-            # Batch delete in groups of 100 for high efficiency
-            if len(message_ids) >= 100:
-                try:
-                    await app.delete_messages(chat_id, message_ids)
-                    deleted_count += len(message_ids)
-                    message_ids = []
-                    # Simple delay to avoid rate limits
-                    await asyncio.sleep(1.0)
-                except Exception:
-                    pass
-                    
-        # Clean up remaining messages
-        if message_ids:
+        current_id = callback_query.message.id
+        # Generate message IDs from current_id - 1 down to 1 (limit to 10,000 messages)
+        start_id = current_id - 1
+        end_id = max(1, current_id - 10000)
+        
+        message_ids = list(range(start_id, end_id - 1, -1))
+        deleted_count = 0
+        batch_size = 100
+        
+        # Sequentially delete the IDs in batches
+        for k in range(0, len(message_ids), batch_size):
+            batch = message_ids[k:k+batch_size]
             try:
-                await app.delete_messages(chat_id, message_ids)
-                deleted_count += len(message_ids)
+                await app.delete_messages(chat_id, batch)
+                deleted_count += len(batch)
+                await asyncio.sleep(0.3)  # Simple delay to avoid rate limits
             except Exception:
                 pass
-                
+
         await callback_query.message.edit_text(
-            f"✅ **Success!**\n\n"
-            f"Deleted `{deleted_count}` messages successfully."
+            "✅ **Success!**\n\n"
+            "Wiped the chat/channel history successfully."
         )
         
     except Exception as e:
