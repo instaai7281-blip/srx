@@ -1229,6 +1229,10 @@ user_caption_preferences = {}
 async def set_rename_command(user_id, custom_rename_tag):
     user_rename_preferences[str(user_id)] = custom_rename_tag
 
+async def set_caption_command(user_id, custom_caption):
+    save_user_data(user_id, "caption", custom_caption)
+    save_user_data(user_id, "caption_enabled", True)
+
 get_user_rename_preference = lambda user_id: user_rename_preferences.get(str(user_id), '⚝ 𝗝𝘂𝘀𝘁 𝗙ꪮ𝗿 𝗬ꪮ𝘂...💗')
 
 def get_user_caption_preference(user_id):
