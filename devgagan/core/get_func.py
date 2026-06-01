@@ -784,6 +784,23 @@ async def get_final_caption(msg, sender):
     final_caption = re.sub(r'(?i)[*_]*let\'?s\s*help[*_]*', '', final_caption)
     final_caption = re.sub(r'✧\s*𝚃𝙷𝙴\s*𝚂𝚃𝚄𝙳𝚈\s*𝚅𝙰𝚄𝙻𝚃\s*✧\s*🏝️?', '', final_caption)
 
+    # ✅ Replace "Extracted By", "Downloaded By", and "Uploaded By" with custom credit
+    final_caption = re.sub(
+        r'(?i)(📩)?\s*(Extracted[\s_]*By)\s*[:➤>–\-]*\s*.*',
+        r'\n\n**⚝ 𝗝𝘂𝘀𝘁 𝗙ꪮ𝗿 𝗬ꪮ𝘂...💗**',
+        final_caption
+    )
+    final_caption = re.sub(
+        r'(?i)(📩)?\s*(Downloaded[\s_]*By)\s*[:➤>–\-]*\s*.*',
+        r'**⚝ 𝗝𝘂𝘀𝘁 𝗙ꪮ𝗿 𝗬ꪮ𝘂...💗**',
+        final_caption
+    )
+    final_caption = re.sub(
+        r'(?i)(⏫)?\s*<u>?\s*(Uploaded[\s_]*By)\s*[➤:>–\-]*\s*[^<\n]+</u>?',
+        r'**⚝ 𝗝𝘂𝘀𝘁 𝗙ꪮ𝗿 𝗬ꪮ𝘂...💗**',
+        final_caption
+    )
+
     # ✅ Aggressive text cleanup: remove anything after an @mention or links entirely if they denote other sources
     # For captions, user asked to only retain their tag, removing any other mentions.
     # We replace any @mention with the custom renaming tag or a default if not set.
@@ -894,7 +911,7 @@ async def copy_message_with_chat_id(app, userbot, sender, chat_id, message_id, e
             base_name, ext = os.path.splitext(clean_filename_base)
             if ext.lower() != '.pdf':
                 ext = '.pdf'
-            formatted_filename = f"{base_name.strip()} ⚝ 𝗝𝘂𝘀𝘁 𝗙ꪮ𝗿 𝗬ꪮ𝘂...💗{ext}".strip()
+            formatted_filename = f"{base_name.strip()} ⚝{ext}".strip()
             final_caption = f"> **{formatted_filename}**\n\n> **⚝ 𝗝𝘂𝘀𝘁 𝗙ꪮ𝗿 𝗬ꪮ𝘂...💗**"
 
         topic_id = None
@@ -1005,7 +1022,7 @@ async def send_media_message(app, target_chat_id, msg, caption, topic_id):
             base_name, ext = os.path.splitext(clean_filename_base)
             if ext.lower() != '.pdf':
                 ext = '.pdf'
-            formatted_filename = f"{base_name.strip()} ⚝ 𝗝𝘂𝘀𝘁 𝗙ꪮ𝗿 𝗬ꪮ𝘂...💗{ext}".strip()
+            formatted_filename = f"{base_name.strip()} ⚝{ext}".strip()
             caption = f"> **{formatted_filename}**\n\n> **⚝ 𝗝𝘂𝘀𝘁 𝗙ꪮ𝗿 𝗬ꪮ𝘂...💗**"
         elif caption:
             # If caption exists → keep it same, just replace links if needed
@@ -1114,30 +1131,26 @@ def format_caption(original_caption, sender, custom_caption, filename=None):
     # ✅ Replace "Extracted By" with custom credit    
     original_caption = re.sub(
         r'(📩)?\s*(Extracted[\s_]*By)\s*[:➤>–\-]*\s*.*',
-
-        r'\n\n**🖤 𝗝𝘂𝘀𝘁 𝗙ꪮ𝗿 𝗬ꪮ𝘂...💗**',
+        r'\n\n**⚝ 𝗝𝘂𝘀𝘁 𝗙ꪮ𝗿 𝗬ꪮ𝘂...💗**',
         original_caption,
         flags=re.IGNORECASE
     )
 
-
-
     # ✅ Replace "Downloaded By" with bot handle
     original_caption = re.sub(
         r'(📩)?\s*(Downloaded[\s_]*By)\s*[:➤>–\-]*\s*.*',
-
         r'**⚝ 𝗝𝘂𝘀𝘁 𝗙ꪮ𝗿 𝗬ꪮ𝘂...💗**',
         original_caption,
         flags=re.IGNORECASE
     )
 
-    
+    # ✅ Replace "Uploaded By" with bot handle
     original_caption = re.sub(
         r'(⏫)?\s*<u>?\s*(Uploaded[\s_]*By)\s*[➤:>–\-]*\s*[^<\n]+</u>?',
-        r'⏫ Uploaded By ➤ 𝗝𝘂𝘀𝘁 𝗙ꪮ𝗿 𝗬ꪮ𝘂...💗',
+        r'**⚝ 𝗝𝘂𝘀𝘁 𝗙ꪮ𝗿 𝗬ꪮ𝘂...💗**',
         original_caption,
         flags=re.IGNORECASE
-        )
+    )
 
     # 🔁 Delete unwanted words
     for word in delete_words:
@@ -1231,7 +1244,7 @@ async def set_caption_command(user_id, custom_caption):
     save_user_data(user_id, "caption", custom_caption)
     save_user_data(user_id, "caption_enabled", True)
 
-get_user_rename_preference = lambda user_id: user_rename_preferences.get(str(user_id), '⚝ 𝗝𝘂𝘀𝘁 𝗙ꪮ𝗿 𝗬ꪮ𝘂...💗')
+get_user_rename_preference = lambda user_id: user_rename_preferences.get(str(user_id), '⚝')
 
 def get_user_caption_preference(user_id):
     try:
@@ -1700,7 +1713,7 @@ async def rename_file(file, sender, caption=None):
     base_name, ext = os.path.splitext(filename)
     
     if ext and ext.lower() == '.pdf':
-        custom_rename_tag = '⚝ 𝗝𝘂𝘀𝘁 𝗙ꪮ𝗿 𝗬ꪮ𝘂...💗'
+        custom_rename_tag = '⚝'
     
     ext = ext if ext and len(ext) <= 6 else ".mp4"
     original_base = base_name
