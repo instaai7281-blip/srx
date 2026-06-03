@@ -810,6 +810,11 @@ async def get_final_caption(msg, sender):
     # Replace all links with your channel link
     final_caption = re.sub(r'https?://\S+|www\.\S+', '🖤', final_caption)
 
+    # 🔁 Delete unwanted words
+    delete_words = load_delete_words(sender)
+    for word in delete_words:
+        final_caption = final_caption.replace(word, ' ')
+
     # Perform additional replacements from user-defined rules
     replacements = load_replacement_words(sender)
     for word, replace_word in replacements.items():
