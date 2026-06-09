@@ -82,7 +82,7 @@ def clean_text_advanced(text, user_tag, delete_words=None, replacements=None):
     text = re.sub(r'[)}\]]', '〙', text)
     
     # Rebrand extraction markers
-    text = re.sub(r'(?i)(Extracted|Download|Upload|Forwarded)[\s_]*By[\s_:➤>–\-]*[^\n]*', r'<b>⚝ 𝗝𝘂𝘀𝘁 𝗙ꪮ𝗿 𝗬ꪮ𝘂...💗</b>', text)
+    text = re.sub(r'(?i)(Extracted|Download|Upload|Forwarded)[\s_]*By[\s_:➤>–\-]*[^\n]*', r'<b>🖤 Sᴛꪮʟᴇɴ Hᴀᴘᴘɪɴᴇss ⚝</b>', text)
     
     if delete_words:
         for word in delete_words:
@@ -228,7 +228,7 @@ async def upload_media(sender, target_chat_id, file, caption, edit, topic_id, th
         thumb_path = thumb
         if not thumb_path:
             thumb_path = thumbnail(sender)
-            if not thumb_path and file.lower().endswith(tuple(VIDEO_EXTENSIONS)) and not file.lower().endswith('.mp4'):
+            if not thumb_path and file.lower().endswith(tuple(VIDEO_EXTENSIONS)):
                 try:
                     print(f"[DEBUG] Trying to create thumbnail for: {file}, duration: {duration}")
                     thumb_path = await screenshot(file, duration, sender)
@@ -251,7 +251,7 @@ async def upload_media(sender, target_chat_id, file, caption, edit, topic_id, th
         # ✅ Generate cleaned caption for user post
         if file.lower().endswith('.pdf') and not caption:
             filename = os.path.basename(file)
-            caption = f"> **{filename}**\n\n> **⚝ 𝗝𝘂𝘀𝘁 𝗙ꪮ𝗿 𝗬ꪮ𝘂...💗**"
+            caption = f"> **{filename}**\n\n> **🖤 Sᴛꪮʟᴇɴ Hᴀᴘᴘɪɴᴇss ⚝**"
 
         # ✅ Generate log caption separately
         user = await app.get_users(sender)
@@ -470,7 +470,7 @@ async def get_msg(userbot: TelegramClient, sender: int, edit_id: int, msg_link: 
 
         # Determine if we should try a fast copy or force download
         is_private = 't.me/c/' in msg_link or 't.me/b/' in msg_link or 'tg://openmessage' in msg_link
-        force_extraction = thumbnail(sender) or get_user_rename_preference(sender) != '⚝ 𝗝𝘂𝘀𝘁 𝗙ꪮ𝗿 𝗬ꪮ𝘂...💗' or get_user_caption_preference(sender)
+        force_extraction = thumbnail(sender) or get_user_rename_preference(sender) != '⚝' or get_user_caption_preference(sender)
 
         # Set initial status message if not already set (e.g. by story/private link logic above)
         if not edit:
@@ -611,7 +611,7 @@ async def get_msg(userbot: TelegramClient, sender: int, edit_id: int, msg_link: 
 
         if file and str(file).lower().endswith('.pdf') and not caption:
             filename = os.path.basename(file)
-            caption = f"> **{filename}**\n\n> **⚝ 𝗝𝘂𝘀𝘁 𝗙ꪮ𝗿 𝗬ꪮ𝘂...💗**"
+            caption = f"> **{filename}**\n\n> **🖤 Sᴛꪮʟᴇɴ Hᴀᴘᴘɪɴᴇss ⚝**"
 
         # Apply PDF Watermark if applicable
         if file and str(file).lower().endswith('.pdf'):
@@ -652,7 +652,7 @@ async def get_msg(userbot: TelegramClient, sender: int, edit_id: int, msg_link: 
         # Prepare thumbnail beforehand
         thumb_path = thumbnail(sender)
         file_extension = str(file).split('.')[-1].lower()
-        if not thumb_path and file_extension in VIDEO_EXTENSIONS and file_extension != 'mp4':
+        if not thumb_path and file_extension in VIDEO_EXTENSIONS:
             metadata = video_metadata(file)
             duration = metadata.get('duration', 0)
             try:
@@ -787,17 +787,17 @@ async def get_final_caption(msg, sender):
     # ✅ Replace "Extracted By", "Downloaded By", and "Uploaded By" with custom credit
     final_caption = re.sub(
         r'(?i)(📩)?\s*(Extracted[\s_]*By)\s*[:➤>–\-]*\s*.*',
-        r'\n\n**⚝ 𝗝𝘂𝘀𝘁 𝗙ꪮ𝗿 𝗬ꪮ𝘂...💗**',
+        r'\n\n**🖤 Sᴛꪮʟᴇɴ Hᴀᴘᴘɪɴᴇss ⚝**',
         final_caption
     )
     final_caption = re.sub(
         r'(?i)(📩)?\s*(Downloaded[\s_]*By)\s*[:➤>–\-]*\s*.*',
-        r'**⚝ 𝗝𝘂𝘀𝘁 𝗙ꪮ𝗿 𝗬ꪮ𝘂...💗**',
+        r'**🖤 Sᴛꪮʟᴇɴ Hᴀᴘᴘɪɴᴇss ⚝**',
         final_caption
     )
     final_caption = re.sub(
         r'(?i)(⏫)?\s*<u>?\s*(Uploaded[\s_]*By)\s*[➤:>–\-]*\s*[^<\n]+</u>?',
-        r'**⚝ 𝗝𝘂𝘀𝘁 𝗙ꪮ𝗿 𝗬ꪮ𝘂...💗**',
+        r'**🖤 Sᴛꪮʟᴇɴ Hᴀᴘᴘɪɴᴇss ⚝**',
         final_caption
     )
 
@@ -917,7 +917,7 @@ async def copy_message_with_chat_id(app, userbot, sender, chat_id, message_id, e
             if ext.lower() != '.pdf':
                 ext = '.pdf'
             formatted_filename = f"{base_name.strip()} ⚝{ext}".strip()
-            final_caption = f"> **{formatted_filename}**\n\n> **⚝ 𝗝𝘂𝘀𝘁 𝗙ꪮ𝗿 𝗬ꪮ𝘂...💗**"
+            final_caption = f"> **{formatted_filename}**\n\n> **🖤 Sᴛꪮʟᴇɴ Hᴀᴘᴘɪɴᴇss ⚝**"
 
         topic_id = None
         if '/' in str(target_chat_id):
@@ -973,7 +973,7 @@ async def copy_message_with_chat_id(app, userbot, sender, chat_id, message_id, e
 
             if file and str(file).lower().endswith('.pdf') and not msg.caption:
                 filename = os.path.basename(file)
-                final_caption = f"> **{filename}**\n\n> **⚝ 𝗝𝘂𝘀𝘁 𝗙ꪮ𝗿 𝗬ꪮ𝘂...💗**"
+                final_caption = f"> **{filename}**\n\n> **🖤 Sᴛꪮʟᴇɴ Hᴀᴘᴘɪɴᴇss ⚝**"
             file_size = os.path.getsize(file)
 
             if msg.photo:
@@ -1028,7 +1028,7 @@ async def send_media_message(app, target_chat_id, msg, caption, topic_id):
             if ext.lower() != '.pdf':
                 ext = '.pdf'
             formatted_filename = f"{base_name.strip()} ⚝{ext}".strip()
-            caption = f"> **{formatted_filename}**\n\n> **⚝ 𝗝𝘂𝘀𝘁 𝗙ꪮ𝗿 𝗬ꪮ𝘂...💗**"
+            caption = f"> **{formatted_filename}**\n\n> **🖤 Sᴛꪮʟᴇɴ Hᴀᴘᴘɪɴᴇss ⚝**"
         elif caption:
             # If caption exists → keep it same, just replace links if needed
             caption = re.sub(
@@ -1041,7 +1041,7 @@ async def send_media_message(app, target_chat_id, msg, caption, topic_id):
             caption = f"🗃 {file_name}"
         else:
             # If nothing → fallback
-            caption = "⚝ 𝗝𝘂𝘀𝘁 𝗙ꪮ𝗿 𝗬ꪮ𝘂...💗"
+            caption = "**🖤 Sᴛꪮʟᴇɴ Hᴀᴘᴘɪɴᴇss ⚝**"
 
         # Send the message with the right method
         if msg.video:
@@ -1107,8 +1107,8 @@ def format_caption(original_caption, sender, custom_caption, filename=None):
     if not original_caption:
         original_caption = ""
 
-    original_caption = original_caption.replace("➪ @PDF_X9 🦋 ❞", "⚝ 𝗝𝘂𝘀𝘁 𝗙ꪮ𝗿 𝗬ꪮ𝘂...💗")
-    original_caption = original_caption.replace("@PDF_X9", "⚝ 𝗝𝘂𝘀𝘁 𝗙ꪮ𝗿 𝗬ꪮ𝘂...💗")
+    original_caption = original_caption.replace("➪ @PDF_X9 🦋 ❞", "**🖤 Sᴛꪮʟᴇɴ Hᴀᴘᴘɪɴᴇss ⚝**")
+    original_caption = original_caption.replace("@PDF_X9", "**🖤 Sᴛꪮʟᴇɴ Hᴀᴘᴘɪɴᴇss ⚝**")
 
     # ✅ Clean fancy characters and replace emojis
     #original_caption = replace_fancy_and_emoji(original_caption)
@@ -1136,7 +1136,7 @@ def format_caption(original_caption, sender, custom_caption, filename=None):
     # ✅ Replace "Extracted By" with custom credit    
     original_caption = re.sub(
         r'(📩)?\s*(Extracted[\s_]*By)\s*[:➤>–\-]*\s*.*',
-        r'\n\n**⚝ 𝗝𝘂𝘀𝘁 𝗙ꪮ𝗿 𝗬ꪮ𝘂...💗**',
+        r'\n\n**🖤 Sᴛꪮʟᴇɴ Hᴀᴘᴘɪɴᴇss ⚝**',
         original_caption,
         flags=re.IGNORECASE
     )
@@ -1144,7 +1144,7 @@ def format_caption(original_caption, sender, custom_caption, filename=None):
     # ✅ Replace "Downloaded By" with bot handle
     original_caption = re.sub(
         r'(📩)?\s*(Downloaded[\s_]*By)\s*[:➤>–\-]*\s*.*',
-        r'**⚝ 𝗝𝘂𝘀𝘁 𝗙ꪮ𝗿 𝗬ꪮ𝘂...💗**',
+        r'**🖤 Sᴛꪮʟᴇɴ Hᴀᴘᴘɪɴᴇss ⚝**',
         original_caption,
         flags=re.IGNORECASE
     )
@@ -1152,7 +1152,7 @@ def format_caption(original_caption, sender, custom_caption, filename=None):
     # ✅ Replace "Uploaded By" with bot handle
     original_caption = re.sub(
         r'(⏫)?\s*<u>?\s*(Uploaded[\s_]*By)\s*[➤:>–\-]*\s*[^<\n]+</u>?',
-        r'**⚝ 𝗝𝘂𝘀𝘁 𝗙ꪮ𝗿 𝗬ꪮ𝘂...💗**',
+        r'**🖤 Sᴛꪮʟᴇɴ Hᴀᴘᴘɪɴᴇss ⚝**',
         original_caption,
         flags=re.IGNORECASE
     )
@@ -1401,10 +1401,10 @@ async def callback_query_handler(event):
 
         # Display the buttons for selecting the upload method
         buttons = [
-            [Button.inline(f"⚝ 𝗝𝘂𝘀𝘁 𝗙ꪮ𝗿 𝗬ꪮ𝘂...💗 v1 ⚡{pyrogram_check}", b'pyrogram')],
+            [Button.inline(f"🖤 Sᴛꪮʟᴇɴ Hᴀᴘᴘɪɴᴇss ⚝ v1 ⚡{pyrogram_check}", b'pyrogram')],
             [Button.inline(f"⚠️ Coming soon V2 {telethon_check}", b'telethon')]
         ]
-        await event.edit("Choose your preferred upload method:\n\n__**Note:** **⚝ 𝗝𝘂𝘀𝘁 𝗙ꪮ𝗿 𝗬ꪮ𝘂...💗 v2 ⚡**, built on Telethon(base), by @stolen_happines still in beta.__", buttons=buttons)
+        await event.edit("Choose your preferred upload method:\n\n__**Note:** **🖤 Sᴛꪮʟᴇɴ Hᴀᴘᴘɪɴᴇss ⚝ v2 ⚡**, built on Telethon(base), by @stolen_happines still in beta.__", buttons=buttons)
 
     elif event.data == b'pyrogram':
         save_user_upload_method(user_id, "Pyrogram")
@@ -1412,7 +1412,7 @@ async def callback_query_handler(event):
 
     elif event.data == b'telethon':
         save_user_upload_method(user_id, "Telethon")
-        await event.edit("Upload method set to **⚝ 𝗝𝘂𝘀𝘁 𝗙ꪮ𝗿 𝗬ꪮ𝘂...💗 V2 ⚡ \n\n Use V1 V2 is just Testing purpose**")        
+        await event.edit("Upload method set to **🖤 Sᴛꪮʟᴇɴ Hᴀᴘᴘɪɴᴇss ⚝ V2 ⚡ \n\n Use V1 V2 is just Testing purpose**")        
         
     elif event.data == b'reset':
         try:
@@ -1592,7 +1592,7 @@ async def handle_large_file(file, sender, edit, caption):
     
     # ✅ Handle thumbnail
     thumb_path = thumbnail(sender)
-    if not thumb_path and file_extension in VIDEO_EXTENSIONS and file_extension != 'mp4':
+    if not thumb_path and file_extension in VIDEO_EXTENSIONS:
         thumb_path = await screenshot(file, duration, sender)
     try:
         if file_extension in VIDEO_EXTENSIONS:
@@ -1812,7 +1812,7 @@ def progress_callback(done, total, user_id):
     # Format the final output as needed
     final = (
         f"╭──────────────────╮\n"
-        f"│     **__⚝ 𝗝𝘂𝘀𝘁 𝗙ꪮ𝗿 𝗬ꪮ𝘂...💗 ⚡ Uploader__**       \n"
+        f"│     **__🖤 Sᴛꪮʟᴇɴ Hᴀᴘᴘɪɴᴇss ⚝ ⚡ Uploader__**       \n"
         f"├──────────\n"
         f"│ {progress_bar}\n\n"
         f"│ **__Progress:__** {percent:.2f}%\n"
@@ -1875,7 +1875,7 @@ def dl_progress_callback(done, total, user_id):
     # Format the final output as needed
     final = (
         f"╭──────────────────╮\n"
-        f"│     **__⚝ 𝗝𝘂𝘀𝘁 𝗙ꪮ𝗿 𝗬ꪮ𝘂...💗 ⚡ Downloader__**       \n"
+        f"│     **__🖤 Sᴛꪮʟᴇɴ Hᴀᴘᴘɪɴᴇss ⚝ ⚡ Downloader__**       \n"
         f"├──────────\n"
         f"│ {progress_bar}\n\n"
         f"│ **__Progress:__** {percent:.2f}%\n"
