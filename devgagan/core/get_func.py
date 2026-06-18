@@ -117,7 +117,7 @@ def clean_text_advanced(text, user_tag, delete_words=None, replacements=None):
     text = re.sub(r'[)}\]]', '〙', text)
     
     # Rebrand extraction markers
-    text = re.sub(r'(?i)(Extracted|Downloaded|Download|Uploaded|Upload|Forwarded)[\s_]*By[\s_:➤>–\-]*[^\n]*', r'<b>⚝ 𝗝𝘂𝘀𝘁 𝗙ꪮ𝗿 𝗬ꪮ𝘂...💗</b>', text)
+    text = re.sub(r'(?i)(Extracted|Downloaded|Download|Uploaded|Upload|Forwarded)[\s_]*By[\s_:➤>–\-]*[^\n]*', r'<b>🖤 Sᴛꪮʟᴇɴ Hᴀᴘᴘɪɴᴇss ⚝</b>', text)
     
     if delete_words:
         for word in delete_words:
@@ -289,7 +289,7 @@ async def upload_media(sender, target_chat_id, file, caption, edit, topic_id, th
         # ✅ Generate cleaned caption for user post
         if file.lower().endswith('.pdf') and not caption:
             filename = os.path.basename(file)
-            caption = f"> **{filename}**\n\n> **⚝ 𝗝𝘂𝘀𝘁 𝗙ꪮ𝗿 𝗬ꪮ𝘂...💗**"
+            caption = f"> **{filename}**\n\n> **🖤 Sᴛꪮʟᴇɴ Hᴀᴘᴘɪɴᴇss ⚝**"
 
         # ✅ Generate log caption separately
         user = await app.get_users(sender)
@@ -655,7 +655,7 @@ async def get_msg(userbot: TelegramClient, sender: int, edit_id: int, msg_link: 
 
         if file and str(file).lower().endswith('.pdf') and not caption:
             filename = os.path.basename(file)
-            caption = f"> **{filename}**\n\n> **⚝ 𝗝𝘂𝘀𝘁 𝗙ꪮ𝗿 𝗬ꪮ𝘂...💗**"
+            caption = f"> **{filename}**\n\n> **🖤 Sᴛꪮʟᴇɴ Hᴀᴘᴘɪɴᴇss ⚝**"
 
         # Apply PDF Watermark if applicable
         if file and str(file).lower().endswith('.pdf'):
@@ -930,8 +930,8 @@ async def copy_message_with_chat_id(app, userbot, sender, chat_id, message_id, e
             base_name, ext = os.path.splitext(clean_filename_base)
             if ext.lower() != '.pdf':
                 ext = '.pdf'
-            formatted_filename = f"{base_name.strip()} ⚝ 𝗝𝘂𝘀𝘁 𝗙ꪮ𝗿 𝗬ꪮ𝘂...💗{ext}".strip()
-            final_caption = f"> **{formatted_filename}**\n\n> **⚝ 𝗝𝘂𝘀𝘁 𝗙ꪮ𝗿 𝗬ꪮ𝘂...💗**"
+            formatted_filename = f"{base_name.strip()} ⚝{ext}".strip()
+            final_caption = f"> **{formatted_filename}**\n\n> **🖤 Sᴛꪮʟᴇɴ Hᴀᴘᴘɪɴᴇss ⚝**"
 
         topic_id = None
         if '/' in str(target_chat_id):
@@ -1011,7 +1011,7 @@ async def copy_message_with_chat_id(app, userbot, sender, chat_id, message_id, e
 
             if file and str(file).lower().endswith('.pdf') and not msg.caption:
                 filename = os.path.basename(file)
-                final_caption = f"> **{filename}**\n\n> **⚝ 𝗝𝘂𝘀𝘁 𝗙ꪮ𝗿 𝗬ꪮ𝘂...💗**"
+                final_caption = f"> **{filename}**\n\n> **🖤 Sᴛꪮʟᴇɴ Hᴀᴘᴘɪɴᴇss ⚝**"
             file_size = os.path.getsize(file)
 
             if msg.photo:
@@ -1065,8 +1065,8 @@ async def send_media_message(app, target_chat_id, msg, caption, topic_id):
             base_name, ext = os.path.splitext(clean_filename_base)
             if ext.lower() != '.pdf':
                 ext = '.pdf'
-            formatted_filename = f"{base_name.strip()} ⚝ 𝗝𝘂𝘀𝘁 𝗙ꪮ𝗿 𝗬ꪮ𝘂...💗{ext}".strip()
-            caption = f"> **{formatted_filename}**\n\n> **⚝ 𝗝𝘂𝘀𝘁 𝗙ꪮ𝗿 𝗬ꪮ𝘂...💗**"
+            formatted_filename = f"{base_name.strip()} ⚝{ext}".strip()
+            caption = f"> **{formatted_filename}**\n\n> **🖤 Sᴛꪮʟᴇɴ Hᴀᴘᴘɪɴᴇss ⚝**"
         elif caption:
             # If caption exists → keep it same, just replace links if needed
             caption = re.sub(
@@ -1079,7 +1079,7 @@ async def send_media_message(app, target_chat_id, msg, caption, topic_id):
             caption = f"🗃 {file_name}"
         else:
             # If nothing → fallback
-            caption = "**⚝ 𝗝𝘂𝘀𝘁 𝗙ꪮ𝗿 𝗬ꪮ𝘂...💗**"
+            caption = "**🖤 Sᴛꪮʟᴇɴ Hᴀᴘᴘɪɴᴇss ⚝**"
 
         # Send the message with the right method
         if msg.video:
@@ -1148,8 +1148,8 @@ def format_caption(original_caption, sender, custom_caption, filename=None):
     # Clean Chaudhary fancy text first
     original_caption = remove_chaudhary_fancy(original_caption)
 
-    original_caption = original_caption.replace("➪ @PDF_X9 🦋 ❞", "**⚝ 𝗝𝘂𝘀𝘁 𝗙ꪮ𝗿 𝗬ꪮ𝘂...💗**")
-    original_caption = original_caption.replace("@PDF_X9", "**⚝ 𝗝𝘂𝘀𝘁 𝗙ꪮ𝗿 𝗬ꪮ𝘂...💗**")
+    original_caption = original_caption.replace("➪ @PDF_X9 🦋 ❞", "**🖤 Sᴛꪮʟᴇɴ Hᴀᴘᴘɪɴᴇss ⚝**")
+    original_caption = original_caption.replace("@PDF_X9", "**🖤 Sᴛꪮʟᴇɴ Hᴀᴘᴘɪɴᴇss ⚝**")
 
     # ✅ Clean fancy characters and replace emojis
     #original_caption = replace_fancy_and_emoji(original_caption)
@@ -1179,7 +1179,7 @@ def format_caption(original_caption, sender, custom_caption, filename=None):
     # ✅ Replace "Extracted By" with custom credit    
     original_caption = re.sub(
         r'(📩)?\s*(Extracted[\s_]*By)\s*[:➤>–\-]*\s*.*',
-        r'**⚝ 𝗝𝘂𝘀𝘁 𝗙ꪮ𝗿 𝗬ꪮ𝘂...💗**',
+        r'**🖤 Sᴛꪮʟᴇɴ Hᴀᴘᴘɪɴᴇss ⚝**',
         original_caption,
         flags=re.IGNORECASE
     )
@@ -1187,7 +1187,7 @@ def format_caption(original_caption, sender, custom_caption, filename=None):
     # ✅ Replace "Downloaded By" with bot handle
     original_caption = re.sub(
         r'(📩)?\s*(Downloaded[\s_]*By)\s*[:➤>–\-]*\s*.*',
-        r'**⚝ 𝗝𝘂𝘀𝘁 𝗙ꪮ𝗿 𝗬ꪮ𝘂...💗**',
+        r'**🖤 Sᴛꪮʟᴇɴ Hᴀᴘᴘɪɴᴇss ⚝**',
         original_caption,
         flags=re.IGNORECASE
     )
@@ -1195,7 +1195,7 @@ def format_caption(original_caption, sender, custom_caption, filename=None):
     # ✅ Replace "Downloaded by aia" specifically just in case
     original_caption = re.sub(
         r'(📩)?\s*Downloaded[\s_]*by[\s_]*aia.*',
-        r'**⚝ 𝗝𝘂𝘀𝘁 𝗙ꪮ𝗿 𝗬ꪮ𝘂...💗**',
+        r'**🖤 Sᴛꪮʟᴇɴ Hᴀᴘᴘɪɴᴇss ⚝**',
         original_caption,
         flags=re.IGNORECASE
     )
@@ -1203,20 +1203,20 @@ def format_caption(original_caption, sender, custom_caption, filename=None):
     # ✅ Replace "Uploaded By" with custom tag
     original_caption = re.sub(
         r'(⏫)?\s*<u>?\s*(Uploaded[\s_]*By)\s*[➤:>–\-]*\s*[^<\n]+</u>?',
-        r'**⚝ 𝗝𝘂𝘀𝘁 𝗙ꪮ𝗿 𝗬ꪮ𝘂...💗**',
+        r'**🖤 Sᴛꪮʟᴇɴ Hᴀᴘᴘɪɴᴇss ⚝**',
         original_caption,
         flags=re.IGNORECASE
     )
 
-    # Ensure there is only one "⚝ 𝗝𝘂𝘀𝘁 𝗙ꪮ𝗿 𝗬ꪮ𝘂...💗" tag at the very end if it was added/present
-    tag_pattern = r'(?i)(?:\*\*|<b>|🖤|⚝|\s)*𝗝𝘂𝘀𝘁[\s_]*𝗙ꪮ𝗿[\s_]*𝗬ꪮ𝘂\s*\.\.\.\s*💗(?:\*\*|</b>|\s)*'
+    # Ensure there is only one "🖤 Sᴛꪮʟᴇɴ Hᴀᴘᴘɪɴᴇss ⚝" tag at the very end if it was added/present
+    tag_pattern = r'(?i)(?:\*\*|<b>|🖤|⚝|\s)*(?:Sᴛꪮʟᴇɴ[\s_]*Hᴀᴘᴘɪɴᴇss|stolen[\s_]*happiness)(?:\*\*|</b>|⚝|\s)*'
     if re.search(tag_pattern, original_caption):
         cleaned_text = re.sub(tag_pattern, '', original_caption)
         cleaned_text = cleaned_text.strip()
         if cleaned_text:
-            original_caption = cleaned_text + "\n\n**⚝ 𝗝𝘂𝘀𝘁 𝗙ꪮ𝗿 𝗬ꪮ𝘂...💗**"
+            original_caption = cleaned_text + "\n\n**🖤 Sᴛꪮʟᴇɴ Hᴀᴘᴘɪɴᴇss ⚝**"
         else:
-            original_caption = "**⚝ 𝗝𝘂𝘀𝘁 𝗙ꪮ𝗿 𝗬ꪮ𝘂...💗**"
+            original_caption = "**🖤 Sᴛꪮʟᴇɴ Hᴀᴘᴘɪɴᴇss ⚝**"
 
     # 🔁 Delete unwanted words
     for word in delete_words:
@@ -1462,10 +1462,10 @@ async def callback_query_handler(event):
 
         # Display the buttons for selecting the upload method
         buttons = [
-            [Button.inline(f"⚝ 𝗝𝘂𝘀𝘁 𝗙ꪮ𝗿 𝗬ꪮ𝘂...💗 v1 ⚡{pyrogram_check}", b'pyrogram')],
+            [Button.inline(f"🖤 Sᴛꪮʟᴇɴ Hᴀᴘᴘɪɴᴇss ⚝ v1 ⚡{pyrogram_check}", b'pyrogram')],
             [Button.inline(f"⚠️ Coming soon V2 {telethon_check}", b'telethon')]
         ]
-        await event.edit("Choose your preferred upload method:\n\n__**Note:** **⚝ 𝗝𝘂𝘀𝘁 𝗙ꪮ𝗿 𝗬ꪮ𝘂...💗 v2 ⚡**, built on Telethon(base), by @stolen_happines still in beta.__", buttons=buttons)
+        await event.edit("Choose your preferred upload method:\n\n__**Note:** **🖤 Sᴛꪮʟᴇɴ Hᴀᴘᴘɪɴᴇss ⚝ v2 ⚡**, built on Telethon(base), by @stolen_happines still in beta.__", buttons=buttons)
 
     elif event.data == b'pyrogram':
         save_user_upload_method(user_id, "Pyrogram")
@@ -1473,7 +1473,7 @@ async def callback_query_handler(event):
 
     elif event.data == b'telethon':
         save_user_upload_method(user_id, "Telethon")
-        await event.edit("Upload method set to **⚝ 𝗝𝘂𝘀𝘁 𝗙ꪮ𝗿 𝗬ꪮ𝘂...💗 V2 ⚡ \n\n Use V1 V2 is just Testing purpose**")        
+        await event.edit("Upload method set to **🖤 Sᴛꪮʟᴇɴ Hᴀᴘᴘɪɴᴇss ⚝ V2 ⚡ \n\n Use V1 V2 is just Testing purpose**")        
         
     elif event.data == b'reset':
         try:
@@ -1885,7 +1885,7 @@ def progress_callback(done, total, user_id):
     # Format the final output as needed
     final = (
         f"╭──────────────────╮\n"
-        f"│     **__⚝ 𝗝𝘂𝘀𝘁 𝗙ꪮ𝗿 𝗬ꪮ𝘂...💗 ⚡ Uploader__**       \n"
+        f"│     **__🖤 Sᴛꪮʟᴇɴ Hᴀᴘᴘɪɴᴇss ⚝ ⚡ Uploader__**       \n"
         f"├──────────\n"
         f"│ {progress_bar}\n\n"
         f"│ **__Progress:__** {percent:.2f}%\n"
@@ -1948,7 +1948,7 @@ def dl_progress_callback(done, total, user_id):
     # Format the final output as needed
     final = (
         f"╭──────────────────╮\n"
-        f"│     **__⚝ 𝗝𝘂𝘀𝘁 𝗙ꪮ𝗿 𝗬ꪮ𝘂...💗 ⚡ Downloader__**       \n"
+        f"│     **__🖤 Sᴛꪮʟᴇɴ Hᴀᴘᴘɪɴᴇss ⚝ ⚡ Downloader__**       \n"
         f"├──────────\n"
         f"│ {progress_bar}\n\n"
         f"│ **__Progress:__** {percent:.2f}%\n"
