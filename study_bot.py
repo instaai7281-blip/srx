@@ -14,171 +14,171 @@ logging.basicConfig(
 bot = TelegramClient("study_bot_session", API_ID, API_HASH)
 
 START_TEXT = """
-# 🎓 Study Companion Bot
+# 🎓 અભ્યાસ કમ્પેનિયન બોટ (Study Companion Bot)
 
-Welcome to your ultimate study assistant.
+તમારું સ્વાગત છે! હું ટેલિગ્રામના રિચ માર્કડાઉન ફોર્મેટ (કોષ્ટકો, ગણિતના સૂત્રો, ચેકલિસ્ટ) સપોર્ટેડ બોટ છું.
 
-To access the complete reference library of formulas, cheat sheets, and trackers, use the main command below:
+તમામ ફોર્મ્યુલા લાઈબ્રેરી, ચીટ શીટ્સ અને ટ્રેકર્સ મેળવવા માટે નીચેના મુખ્ય કમાન્ડનો ઉપયોગ કરો:
 
-👉 /maths — Master Formula Reference (Algebra, Arithmetic, Geometry & Science)
+👉 /maths — મુખ્ય સૂત્રો અને સંદર્ભ યાદી (ગણિત, વિજ્ઞાન અને કોષ્ટકો)
 
 ---
-🛡️ Developed by **𝗖𝗛𝗢𝗦𝗘𝗡 𝗢𝗡𝗘 ⚝**
+🛡️ ડેવલપર: **𝗖𝗛𝗢𝗦𝗘𝗡 𝗢𝗡𝗘 ⚝**
 """
 
 MATHS_TEXT = """
-# 📐 Master Formula Reference
+# 📐 મુખ્ય સંદર્ભ મેનૂ (Master Reference)
 
-Welcome to the consolidated formula database. Click the section you want to study:
-- `/algebra` — Higher Mathematics (Algebra, Calculus & Probability)
-- `/arithmetic` — Percentages, Ratios & Financial Mathematics
-- `/geometry` — Perimeter, Area & 3D Shape Volume tables
-- `/cheatsheet` — Science Quick Reference (Physics & Chemistry)
-- `/timetable` — Weekly Study Schedule
-- `/checklist` — Syllabus Progress Tracker
+ફોર્મ્યુલા ડેટાબેઝમાં આપનું સ્વાગત છે. તમને જોઈતો વિભાગ પસંદ કરો:
+- `/algebra` — ઉચ્ચ ગણિત (બીજગણિત, કલનશાસ્ત્ર અને સંભાવના)
+- `/arithmetic` — અંકગણિત (ટકાવારી, ગુણોત્તર અને ચક્રવૃદ્ધિ વ્યાજ)
+- `/geometry` — ભૂમિતિ (દ્વિ-પરિમાણીય અને ત્રિ-પરિમાણીય આકારોના કોષ્ટકો)
+- `/cheatsheet` — વિજ્ઞાન ચીટ શીટ (ભૌતિકશાસ્ત્ર અને રસાયણશાસ્ત્ર)
+- `/timetable` — સાપ્તાહિક અભ્યાસ પત્રક (ટાઇમટેબલ)
+- `/checklist` — સિલેબસ પ્રગતિ ચેકલિસ્ટ
 
 ---
-Compiled by **𝗖𝗛𝗢𝗦𝗘𝗡 𝗢𝗡𝗘 ⚝**
+સંકલનકર્તા: **𝗖𝗛𝗢𝗦𝗘𝗡 𝗢𝗡𝗘 ⚝**
 """
 
 ALGEBRA_TEXT = """
-# 📐 Higher Mathematics Formulas
+# 📐 ઉચ્ચ ગણિતના સૂત્રો (Higher Maths)
 
-## 1. Algebra & Series
-* **Quadratic Formula:**
-  If $ax^2 + bx + c = 0$, then:
+## ૧. બીજગણિત અને શ્રેણી (Algebra & Series)
+* **દ્વિઘાત સમીકરણનું સૂત્ર (Quadratic Formula):**
+  જો $ax^2 + bx + c = 0$ હોય, તો તેના ઉકેલ:
   $$x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}$$
-* **Binomial Theorem:**
+* **દ્વિપદી પ્રમેય (Binomial Theorem):**
   $$(a+b)^n = \\sum_{k=0}^{n} \\binom{n}{k} a^{n-k} b^k$$
 
-## 2. Calculus
-* **Derivative Definition:**
+## ૨. કલનશાસ્ત્ર (Calculus)
+* **વિકલનની વ્યાખ્યા (Derivative):**
   $$f'(x) = \\lim_{h \\to 0} \\frac{f(x+h) - f(x)}{h}$$
-* **Integration by Parts:**
+* **ખંડશઃ સંકલન (Integration by Parts):**
   $$\\int u\\,dv = uv - \\int v\\,du$$
 
-## 3. Probability & Statistics
-* **Bayes' Theorem:**
+## ૩. સંભાવના અને આંકડાશાસ્ત્ર (Probability & Stats)
+* **બેઝનું પ્રમેય (Bayes' Theorem):**
   $$P(A|B) = \\frac{P(B|A) \\cdot P(A)}{P(B)}$$
-* **Standard Deviation (Sample):**
+* **પ્રમાણિત વિચલન (Standard Deviation - Sample):**
   $$s = \\sqrt{\\frac{\\sum_{i=1}^{n} (x_i - \\bar{x})^2}{n-1}}$$
 
 ---
-🛡️ Owner: **𝗖𝗛𝗢𝗦𝗘𝗡 𝗢𝗡𝗘 ⚝**
+🛡️ માલિક: **𝗖𝗛𝗢𝗦𝗘𝗡 𝗢𝗡𝗘 ⚝**
 """
 
 ARITHMETIC_TEXT = """
-# 🧮 Arithmetic: Percentages & Ratios
+# 🧮 અંકગણિત: ટકાવારી અને ગુણોત્તર
 
-## 1. Percentages
-* **Percentage Change:**
-  $$\\text{Percentage Change} = \\frac{\\text{New Value} - \\text{Old Value}}{\\text{Old Value}} \\times 100\\%$$
-* **Profit & Loss Percentage:**
-  $$\\text{Profit \\%} = \\frac{\\text{Selling Price} - \\text{Cost Price}}{\\text{Cost Price}} \\times 100\\%$$
-  $$\\text{Loss \\%} = \\frac{\\text{Cost Price} - \\text{Selling Price}}{\\text{Cost Price}} \\times 100\\%$$
-* **Simple Interest:**
+## ૧. ટકાવારી (Percentages)
+* **ટકાવારીમાં ફેરફાર (Percentage Change):**
+  $$\\text{ટકાવારી ફેરફાર} = \\frac{\\text{નવી કિંમત} - \\text{જૂની કિંમત}}{\\text{જૂની કિંમત}} \\times 100\\%$$
+* **નફો અને નુકસાન ટકાવારી (Profit & Loss %):**
+  $$\\text{નફો \\%} = \\frac{\\text{વેચાણ કિંમત} - \\text{ખરીદ કિંમત}}{\\text{ખરીદ કિંમત}} \\times 100\\%$$
+  $$\\text{નુકસાન \\%} = \\frac{\\text{ખરીદ કિંમત} - \\text{વેચાણ કિંમત}}{\\text{ખરીદ કિંમત}} \\times 100\\%$$
+* **સાદું વ્યાજ (Simple Interest):**
   $$I = \\frac{P \\cdot r \\cdot t}{100}$$
-* **Compound Interest:**
+* **ચક્રવૃદ્ધિ વ્યાજ (Compound Interest):**
   $$A = P \\left(1 + \\frac{r}{n}\\right)^{nt}$$
-  _Where $A$ is the total amount, $P$ is principal, $r$ is interest rate, $n$ is compounding frequency, and $t$ is time._
+  _જ્યાં $A$ કુલ વ્યાજમુદ્દલ છે, $P$ મુદ્દલ છે, $r$ વ્યાજનો દર છે, $n$ વ્યાજ ગણતરીની ચક્રવૃદ્ધિ આવૃત્તિ છે, અને $t$ સમય છે._
 
-## 2. Ratio & Proportion
-* **Ratio Equality (Proportion):**
+## ૨. ગુણોત્તર અને પ્રમાણ (Ratio & Proportion)
+* **ગુણોત્તર સમાનતા (Proportion):**
   $$\\frac{a}{b} = \\frac{c}{d} \\implies a \\cdot d = b \\cdot c$$
-* **Compound Ratio:**
-  $$\\text{Compound of } a:b \\text{ and } c:d \\text{ is } (a \\cdot c) : (b \\cdot d)$$
-* **Direct Variation:** $y = k \\cdot x$ (where $k$ is constant)
-* **Inverse Variation:** $y = \\frac{k}{x} \\implies x \\cdot y = k$
+* **મિશ્ર ગુણોત્તર (Compound Ratio):**
+  $$a:b \\text{ અને } c:d \\text{ નો મિશ્ર ગુણોત્તર } (a \\cdot c) : (b \\cdot d) \\text{ થાય.}$$
+* **સમપ્રમાણ (Direct Variation):** $y = k \\cdot x$ (જ્યાં $k$ અચળાંક છે)
+* **વ્યસ્તપ્રમાણ (Inverse Variation):** $y = \\frac{k}{x} \\implies x \\cdot y = k$
 
 ---
-🛡️ Owner: **𝗖𝗛𝗢𝗦𝗘𝗡 𝗢𝗡𝗘 ⚝**
+🛡️ માલિક: **𝗖𝗛𝗢𝗦𝗘𝗡 𝗢𝗡𝗘 ⚝**
 """
 
 GEOMETRY_TEXT = """
-# 📏 Geometry: Area & Volume Formulas
+# 📏 ભૂમિતિ: ક્ષેત્રફળ અને ઘનફળ
 
-## 1. 2D Shapes (Area & Perimeter)
-* **Circle:**
-  * $\\text{Area} = \\pi r^2$
-  * $\\text{Circumference} = 2\\pi r$
-* **Triangle:**
-  * $\\text{Area} = \\frac{1}{2} \\cdot b \\cdot h$
-  * $\\text{Heron's Formula:} \\sqrt{s(s-a)(s-b)(s-c)} \\quad \\text{where } s = \\frac{a+b+c}{2}$
+## ૧. દ્વિ-પરિમાણીય આકારો (2D Shapes)
+* **વર્તુળ (Circle):**
+  * $\\text{ક્ષેત્રફળ} = \\pi r^2$
+  * $\\text{પરિધ} = 2\\pi r$
+* **ત્રિકોણ (Triangle):**
+  * $\\text{ક્ષેત્રફળ} = \\frac{1}{2} \\cdot \\text{પાયો} \\cdot \\text{વેધ}$
+  * $\\text{હેરોનનું સૂત્ર:} \\sqrt{s(s-a)(s-b)(s-c)} \\quad \\text{જ્યાં } s = \\frac{a+b+c}{2}$
 
-## 2. 3D Solids (Volume & Surface Area)
-| Solid Shape | Volume Formula | Total Surface Area (TSA) |
+## ૨. ત્રિ-પરિમાણીય આકારો (3D Solids)
+| આકાર | ઘનફળનું સૂત્ર (Volume) | કુલ પૃષ્ઠફળ (Surface Area) |
 |:---|:---:|:---|
-| **Sphere** | $V = \\frac{4}{3}\\pi r^3$ | $A = 4\\pi r^2$ |
-| **Cylinder** | $V = \\pi r^2 h$ | $A = 2\\pi r(r + h)$ |
-| **Cone** | $V = \\frac{1}{3}\\pi r^2 h$ | $A = \\pi r(r + \\sqrt{r^2 + h^2})$ |
-| **Cube** | $V = a^3$ | $A = 6a^2$ |
-| **Rect. Prism** | $V = l \\cdot w \\cdot h$ | $A = 2(lw + lh + wh)$ |
+| **ગોળો (Sphere)** | $V = \\frac{4}{3}\\pi r^3$ | $A = 4\\pi r^2$ |
+| **નળાકાર (Cylinder)** | $V = \\pi r^2 h$ | $A = 2\\pi r(r + h)$ |
+| **શંકુ (Cone)** | $V = \\frac{1}{3}\\pi r^2 h$ | $A = \\pi r(r + \\sqrt{r^2 + h^2})$ |
+| **સમઘન (Cube)** | $V = a^3$ | $A = 6a^2$ |
+| **લંબઘન (Prism)** | $V = l \\cdot w \\cdot h$ | $A = 2(lw + lh + wh)$ |
 
 ---
-🛡️ Owner: **𝗖𝗛𝗢𝗦𝗘𝗡 𝗢𝗡𝗘 ⚝**
+🛡️ માલિક: **𝗖𝗛𝗢𝗦𝗘𝗡 𝗢𝗡𝗘 ⚝**
 """
 
 CHEATSHEET_TEXT = """
-# 📊 Subject Cheat Sheet
+# 📊 વિજ્ઞાન ચીટ શીટ (Science Cheat Sheet)
 
-| Subject | Topic | Key Formula | Explanation |
+| વિષય | પ્રકરણ / ટોપિક | મુખ્ય સૂત્ર | ટૂંકી સમજૂતી |
 |:---|:---|:---:|:---|
-| **Physics** | Gravity | $F = G \\frac{m_1 m_2}{r^2}$ | Universal Gravitational Force |
-| **Physics** | Einstein | $E = mc^2$ | Mass-energy Equivalence |
-| **Chemistry**| Ideal Gas | $PV = nRT$ | Pressure, Vol, Temp relation |
-| **Chemistry**| pH Value | $\\text{pH} = -\\log_{10}[\\text{H}^+]$ | Acidity/Alkalinity measure |
-| **Math** | Euler Poly | $V - E + F = 2$ | Vertices, Edges, Faces |
-| **Math** | Euler Identity| $e^{i\\pi} + 1 = 0$ | Linking 5 major constants |
+| **ભૌતિકશાસ્ત્ર** | ગુરુત્વાકર્ષણ | $F = G \\frac{m_1 m_2}{r^2}$ | સાર્વત્રિક ગુરુત્વાકર્ષણ બળ |
+| **ભૌતિકશાસ્ત્ર** | સાપેક્ષતા | $E = mc^2$ | દળ-ઊર્જા સમતુલ્યતા સૂત્ર |
+| **રસાયણશાસ્ત્ર**| આદર્શ વાયુ | $PV = nRT$ | દબાણ, કદ અને તાપમાન સંબંધ |
+| **રસાયણશાસ્ત્ર**| pH માપક્રમ | $\\text{pH} = -\\log_{10}[\\text{H}^+]$ | એસિડ અને બેઇઝનું માપ |
+| **ગણિત** | યુલર બહુકોણ | $V - E + F = 2$ | શિરોબિંદુ, ધાર અને ફલક સંબંધ |
+| **ગણિત** | યુલર આઇડેન્ટિટી| $e^{i\\pi} + 1 = 0$ | ૫ મુખ્ય ગાણિતિક અચળાંકો |
 
 ---
-🛡️ Owner: **𝗖𝗛𝗢𝗦𝗘𝗡 𝗢𝗡𝗘 ⚝**
+🛡️ માલિક: **𝗖𝗛𝗢𝗦𝗘𝗡 𝗢𝗡𝗘 ⚝**
 """
 
 TIMETABLE_TEXT = """
-# 📅 Study Timetable
+# 📅 સાપ્તાહિક અભ્યાસ પત્રક (Study Timetable)
 
-| Day | 09:00 - 12:00 | 14:00 - 17:00 | 19:00 - 22:00 |
+| દિવસ | સવારે ૦૯:૦૦ - ૧૨:૦૦ | બપોરે ૧૪:૦૦ - ૧૭:૦૦ | સાંજે ૧૯:૦૦ - ૨૨:૦૦ |
 |:---|:---:|:---:|:---:|
-| **Mon** | Math (Algebra) 📐 | Physics (Mechanics) ⚛️ | Revision & Homework 📝 |
-| **Tue** | Chemistry (Organic) 🧪| English Literature 📖 | Coding Practice 💻 |
-| **Wed** | Biology (Genetics) 🌿 | History (World War) 🏛️ | Mock Test Practice ⏱️ |
-| **Thu** | Math (Calculus) 📐 | Physics (Optics) ⚛️ | Coding Practice 💻 |
-| **Fri** | Chemistry (Inorg) 🧪 | Revision 📝 | Project Work 🚀 |
-| **Sat** | Full Mock Test 🏆 | Performance Analysis 📊 | General Knowledge 🌍 |
-| **Sun** | Off / Buffer Time 🏖️ | Plan Next Week 📅 | Reading Books 📚 |
+| **સોમવાર** | ગણિત (બીજગણિત) 📐 | ભૌતિકશાસ્ત્ર (મિકેનિક્સ) ⚛️ | પુનરાવર્તન અને હોમવર્ક 📝 |
+| **મંગળવાર** | રસાયણશાસ્ત્ર (ઓર્ગેનિક) 🧪| અંગ્રેજી સાહિત્ય 📖 | કોડિંગ પ્રેક્ટિસ 💻 |
+| **બુધવાર** | જીવવિજ્ઞાન (જીનેટિક્સ) 🌿 | ઇતિહાસ 🏛️ | મોક ટેસ્ટ પ્રેક્ટિસ ⏱️ |
+| **ગુરુવાર** | ગણિત (કલનશાસ્ત્ર) 📐 | ભૌતિકશાસ્ત્ર (ઓપ્ટિક્સ) ⚛️ | કોડિંગ પ્રેક્ટિસ 💻 |
+| **શુક્રવાર** | રસાયણશાસ્ત્ર (ઇનઓર્ગેનિક) 🧪| પુનરાવર્તન 📝 | પ્રોજેક્ટ વર્ક 🚀 |
+| **શનિવાર** | ફુલ મોક ટેસ્ટ 🏆 | પરિણામ વિશ્લેષણ 📊 | સામાન્ય જ્ઞાન (GK) 🌍 |
+| **રવિવાર** | રજા / આરામ 🏖️ | આવતા અઠવાડિયાનું આયોજન 📅 | પુસ્તક વાંચન 📚 |
 
 ---
-🛡️ Owner: **𝗖𝗛𝗢𝗦𝗘𝗡 𝗢𝗡𝗘 ⚝**
+🛡️ માલિક: **𝗖𝗛𝗢𝗦𝗘𝗡 𝗢𝗡𝗘 ⚝**
 """
 
 CHECKLIST_TEXT = """
-# 📋 Syllabus Tracker Checklist
+# 📋 સિલેબસ પ્રગતિ ચેકલિસ્ટ
 
-## 1. Mathematics
-- [x] Algebra: Quadratic Equations & Binomials
-- [x] Calculus: Limits & Basic Derivatives
-- [ ] Integration: Definite & Indefinite Integrals
-- [ ] Statistics: Variance & Standard Deviation
+## ૧. ગણિત (Mathematics)
+- [x] બીજગણિત: દ્વિઘાત સમીકરણો અને દ્વિપદી પ્રમેય
+- [x] કલનશાસ્ત્ર: વિકલનની વ્યાખ્યા અને મૂળભૂત નિયમો
+- [ ] સંકલન: નિયત અને અનિયત સંકલન
+- [ ] આંકડાશાસ્ત્ર: પ્રમાણિત વિચલન અને વિચરણ
 
-## 2. Arithmetic
-- [x] Ratio & Proportion rules
-- [x] Simple & Compound Interest formulas
-- [ ] Percentage profit, loss & discount hacks
+## ૨. અંકગણિત (Arithmetic)
+- [x] ગુણોત્તર અને પ્રમાણના નિયમો
+- [x] સાદું અને ચક્રવૃદ્ધિ વ્યાજ
+- [ ] ટકાવારી: નફો, નુકસાન અને વળતર
 
-## 3. Physics
-- [x] Mechanics: Newton's Laws & Friction
-- [ ] Gravity & Orbital Mechanics
-- [ ] Thermodynamics & Heat Transfer
+## ૩. ભૌતિકશાસ્ત્ર (Physics)
+- [x] મિકેનિક્સ: ન્યૂટનના નિયમો અને ઘર્ષણ
+- [ ] ગુરુત્વાકર્ષણ અને ભ્રમણકક્ષા
+- [ ] થર્મોડાયનેમિક્સ અને હીટ ટ્રાન્સફર
 
 ---
-🛡️ Owner: **𝗖𝗛𝗢𝗦𝗘𝗡 𝗢𝗡𝗘 ⚝**
+🛡️ માલિક: **𝗖𝗛𝗢𝗦𝗘𝗡 𝗢𝗡𝗘 ⚝**
 """
 
 @bot.on(events.NewMessage(pattern="/start"))
 async def start_handler(e):
     await bot(functions.messages.SendMessageRequest(
         peer=await e.get_input_chat(),
-        message="Study Reference Menu",
+        message="અભ્યાસ સંદર્ભ મેનુ",
         rich_message=InputRichMessageMarkdown(markdown=START_TEXT),
     ))
 
@@ -186,7 +186,7 @@ async def start_handler(e):
 async def maths_handler(e):
     await bot(functions.messages.SendMessageRequest(
         peer=await e.get_input_chat(),
-        message="Master Reference",
+        message="મુખ્ય સંદર્ભ મેનૂ",
         rich_message=InputRichMessageMarkdown(markdown=MATHS_TEXT),
     ))
 
@@ -194,7 +194,7 @@ async def maths_handler(e):
 async def algebra_handler(e):
     await bot(functions.messages.SendMessageRequest(
         peer=await e.get_input_chat(),
-        message="Algebra Formulas",
+        message="બીજગણિતના સૂત્રો",
         rich_message=InputRichMessageMarkdown(markdown=ALGEBRA_TEXT),
     ))
 
@@ -202,7 +202,7 @@ async def algebra_handler(e):
 async def arithmetic_handler(e):
     await bot(functions.messages.SendMessageRequest(
         peer=await e.get_input_chat(),
-        message="Arithmetic Formulas",
+        message="અંકગણિતના સૂત્રો",
         rich_message=InputRichMessageMarkdown(markdown=ARITHMETIC_TEXT),
     ))
 
@@ -210,7 +210,7 @@ async def arithmetic_handler(e):
 async def geometry_handler(e):
     await bot(functions.messages.SendMessageRequest(
         peer=await e.get_input_chat(),
-        message="Geometry Formulas",
+        message="ભૂમિતિના સૂત્રો",
         rich_message=InputRichMessageMarkdown(markdown=GEOMETRY_TEXT),
     ))
 
@@ -218,7 +218,7 @@ async def geometry_handler(e):
 async def cheatsheet_handler(e):
     await bot(functions.messages.SendMessageRequest(
         peer=await e.get_input_chat(),
-        message="Science Cheat Sheet",
+        message="વિજ્ઞાન ચીટ શીટ",
         rich_message=InputRichMessageMarkdown(markdown=CHEATSHEET_TEXT),
     ))
 
@@ -226,7 +226,7 @@ async def cheatsheet_handler(e):
 async def timetable_handler(e):
     await bot(functions.messages.SendMessageRequest(
         peer=await e.get_input_chat(),
-        message="Study Timetable",
+        message="અભ્યાસ ટાઇમટેબલ",
         rich_message=InputRichMessageMarkdown(markdown=TIMETABLE_TEXT),
     ))
 
@@ -234,12 +234,12 @@ async def timetable_handler(e):
 async def checklist_handler(e):
     await bot(functions.messages.SendMessageRequest(
         peer=await e.get_input_chat(),
-        message="Syllabus Tracker",
+        message="સિલેબસ ચેકલિસ્ટ",
         rich_message=InputRichMessageMarkdown(markdown=CHECKLIST_TEXT),
     ))
 
 if __name__ == "__main__":
-    print("[INFO] Starting Study Companion Bot...")
+    print("[INFO] Starting Study Companion Bot in Gujarati...")
     bot.start(bot_token=BOT_TOKEN)
     print("[INFO] Bot is running...")
     bot.run_until_disconnected()
