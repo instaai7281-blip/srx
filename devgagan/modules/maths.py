@@ -1,30 +1,6 @@
-import logging
-import sys
-from telethon import TelegramClient, events, functions
+from devgagan import sex
+from telethon import events, functions
 from telethon.tl.types import InputRichMessageMarkdown
-from config import API_ID, API_HASH, BOT_TOKEN
-
-# Configure logging
-logging.basicConfig(
-    format='[%(levelname) 5s/%(asctime)s] %(name)s: %(message)s',
-    level=logging.INFO,
-    stream=sys.stdout
-)
-
-bot = TelegramClient("study_bot_session", API_ID, API_HASH)
-
-START_TEXT = """
-# 🎓 અભ્યાસ કમ્પેનિયન બોટ (Study Companion Bot)
-
-તમારું સ્વાગત છે! હું ટેલિગ્રામના રિચ માર્કડાઉન ફોર્મેટ (કોષ્ટકો, ગણિતના સૂત્રો, ચેકલિસ્ટ) સપોર્ટેડ બોટ છું.
-
-તમામ ફોર્મ્યુલા લાઈબ્રેરી, ચીટ શીટ્સ અને ટ્રેકર્સ મેળવવા માટે નીચેના મુખ્ય કમાન્ડનો ઉપયોગ કરો:
-
-👉 /maths — મુખ્ય સૂત્રો અને સંદર્ભ યાદી (ગણિત, વિજ્ઞાન અને કોષ્ટકો)
-
----
-🛡️ ડેવલપર: **𝗖𝗛𝗢𝗦𝗘𝗡 𝗢𝗡𝗘 ⚝**
-"""
 
 MATHS_TEXT = """
 # 📐 મુખ્ય સંદર્ભ મેનૂ (Master Reference)
@@ -174,72 +150,58 @@ CHECKLIST_TEXT = """
 🛡️ માલિક: **𝗖𝗛𝗢𝗦𝗘𝗡 𝗢𝗡𝗘 ⚝**
 """
 
-@bot.on(events.NewMessage(pattern="/start"))
-async def start_handler(e):
-    await bot(functions.messages.SendMessageRequest(
-        peer=await e.get_input_chat(),
-        message="અભ્યાસ સંદર્ભ મેનુ",
-        rich_message=InputRichMessageMarkdown(markdown=START_TEXT),
-    ))
-
-@bot.on(events.NewMessage(pattern="/maths"))
+@sex.on(events.NewMessage(pattern="/maths"))
 async def maths_handler(e):
-    await bot(functions.messages.SendMessageRequest(
+    await sex(functions.messages.SendMessageRequest(
         peer=await e.get_input_chat(),
         message="મુખ્ય સંદર્ભ મેનૂ",
         rich_message=InputRichMessageMarkdown(markdown=MATHS_TEXT),
     ))
 
-@bot.on(events.NewMessage(pattern="/algebra"))
+@sex.on(events.NewMessage(pattern="/algebra"))
 async def algebra_handler(e):
-    await bot(functions.messages.SendMessageRequest(
+    await sex(functions.messages.SendMessageRequest(
         peer=await e.get_input_chat(),
         message="બીજગણિતના સૂત્રો",
         rich_message=InputRichMessageMarkdown(markdown=ALGEBRA_TEXT),
     ))
 
-@bot.on(events.NewMessage(pattern="/arithmetic"))
+@sex.on(events.NewMessage(pattern="/arithmetic"))
 async def arithmetic_handler(e):
-    await bot(functions.messages.SendMessageRequest(
+    await sex(functions.messages.SendMessageRequest(
         peer=await e.get_input_chat(),
         message="અંકગણિતના સૂત્રો",
         rich_message=InputRichMessageMarkdown(markdown=ARITHMETIC_TEXT),
     ))
 
-@bot.on(events.NewMessage(pattern="/geometry"))
+@sex.on(events.NewMessage(pattern="/geometry"))
 async def geometry_handler(e):
-    await bot(functions.messages.SendMessageRequest(
+    await sex(functions.messages.SendMessageRequest(
         peer=await e.get_input_chat(),
         message="ભૂમિતિના સૂત્રો",
         rich_message=InputRichMessageMarkdown(markdown=GEOMETRY_TEXT),
     ))
 
-@bot.on(events.NewMessage(pattern="/cheatsheet"))
+@sex.on(events.NewMessage(pattern="/cheatsheet"))
 async def cheatsheet_handler(e):
-    await bot(functions.messages.SendMessageRequest(
+    await sex(functions.messages.SendMessageRequest(
         peer=await e.get_input_chat(),
         message="વિજ્ઞાન ચીટ શીટ",
         rich_message=InputRichMessageMarkdown(markdown=CHEATSHEET_TEXT),
     ))
 
-@bot.on(events.NewMessage(pattern="/timetable"))
+@sex.on(events.NewMessage(pattern="/timetable"))
 async def timetable_handler(e):
-    await bot(functions.messages.SendMessageRequest(
+    await sex(functions.messages.SendMessageRequest(
         peer=await e.get_input_chat(),
         message="અભ્યાસ ટાઇમટેબલ",
         rich_message=InputRichMessageMarkdown(markdown=TIMETABLE_TEXT),
     ))
 
-@bot.on(events.NewMessage(pattern="/checklist"))
+@sex.on(events.NewMessage(pattern="/checklist"))
 async def checklist_handler(e):
-    await bot(functions.messages.SendMessageRequest(
+    await sex(functions.messages.SendMessageRequest(
         peer=await e.get_input_chat(),
         message="સિલેબસ ચેકલિસ્ટ",
         rich_message=InputRichMessageMarkdown(markdown=CHECKLIST_TEXT),
     ))
-
-if __name__ == "__main__":
-    print("[INFO] Starting Study Companion Bot in Gujarati...")
-    bot.start(bot_token=BOT_TOKEN)
-    print("[INFO] Bot is running...")
-    bot.run_until_disconnected()
