@@ -20,11 +20,11 @@ def main():
     # Give the web server a few seconds to initialize
     time.sleep(3)
 
-    print("--- Starting Telegram Bot module (devgagan) ---")
+    print("--- Starting Telegram Bot module (study_bot) ---")
     # Run the bot module in the main thread
     # This will keep the container running
     try:
-        os.system("python3 -m devgagan")
+        os.system("python3 study_bot.py")
     except Exception as e:
         print(f"Bot encountered an error: {e}")
     except KeyboardInterrupt:
