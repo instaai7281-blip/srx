@@ -695,13 +695,21 @@ async def get_msg(userbot: TelegramClient, sender: int, edit_id: int, msg_link: 
             # unique directory for each user to prevent concurrency collisions
             temp_dir = os.path.join("downloads", str(sender))
             os.makedirs(temp_dir, exist_ok=True)
-            target_file_path = os.path.join(temp_dir, file_name)
             
-            file = await client.download_media(
+            # Join the chat first to resolve username entity and prevent PeerIdInvalid / ChannelPrivate errors
+            if client and client != app and isinstance(chat, str) and not chat.startswith("-") and not chat.isdigit():
+                try:
+                    await client.join_chat(chat)
+                except Exception:
+                    pass
+            
+            file = await fast_download(
+                client,
                 msg,
-                file_name=target_file_path,            
-                progress_args=("╔══━⚡️ Downloading ⚡️━══╗\n", edit, time.time()),
-                progress=progress_bar
+                reply=edit,
+                download_folder=temp_dir,
+                progress_bar_function=lambda done, total: progress_callback(done, total, sender),
+                name=file_name
             )
         except Exception as e:
             print(f"Download error: {e}")
@@ -1081,13 +1089,21 @@ async def copy_message_with_chat_id(app, userbot, sender, chat_id, message_id, e
             # unique directory for each user to prevent concurrency collisions
             temp_dir = os.path.join("downloads", str(sender))
             os.makedirs(temp_dir, exist_ok=True)
-            target_file_path = os.path.join(temp_dir, filename)
 
-            file = await userbot.download_media(
+            # Join the chat first to resolve username entity and prevent PeerIdInvalid / ChannelPrivate errors
+            if userbot and isinstance(resolved_chat_id, str) and not resolved_chat_id.startswith("-") and not resolved_chat_id.isdigit():
+                try:
+                    await userbot.join_chat(resolved_chat_id)
+                except Exception:
+                    pass
+
+            file = await fast_download(
+                userbot,
                 msg,
-                file_name=target_file_path,
-                progress=progress_bar,
-                progress_args=("╭─────────────────────╮\n│      **__Downloading__...**\n├─────────────────────", edit, time.time())
+                reply=edit,
+                download_folder=temp_dir,
+                progress_bar_function=lambda done, total: progress_callback(done, total, sender),
+                name=filename
             )
             if not file:
                 return False
