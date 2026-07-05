@@ -18,16 +18,15 @@ import random
 import string
 import asyncio
 from pyrogram import filters, Client
+from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo, Message
 from devgagan import app, task_semaphore
-from config import API_ID, API_HASH, FREEMIUM_LIMIT, PREMIUM_LIMIT, OWNER_ID
+from config import API_ID, API_HASH, FREEMIUM_LIMIT, PREMIUM_LIMIT, OWNER_ID, WEBSITE_URL
 from devgagan.core.get_func import get_msg, save_user_data, load_user_data
 from devgagan.core.func import *
 from devgagan.core.mongo import db
 from pyrogram.errors import FloodWait
 from datetime import datetime, timedelta
-from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 import subprocess
-from pyrogram.types import Message
 from devgagan.modules.shrink import is_user_verified
 async def generate_random_name(length=8):
     return ''.join(random.choices(string.ascii_lowercase, k=length))
@@ -95,7 +94,17 @@ async def single_link(_, message):
     # Check cooldown
     can_proceed, response_message = await check_interval(user_id, await chk_user(message, user_id))
     if not can_proceed:
-        await message.reply(response_message)
+        web_url = WEBSITE_URL if "http" in WEBSITE_URL else f"https://{WEBSITE_URL}"
+        web_app_url = f"{web_url}/watch-ad?user_id={user_id}"
+        keyboard = InlineKeyboardMarkup([
+            [InlineKeyboardButton("📺 Watch Ad to Bypass Cooldown", web_app=WebAppInfo(url=web_app_url))],
+            [InlineKeyboardButton("⭐ Buy Premium (Ad-Free)", url="https://t.me/Chosen_One_x_bot")]
+        ])
+        await message.reply(
+            f"⏳ **Cooldown Active!**\n\n{response_message}\n\n"
+            f"👉 Or watch a quick 10-second ad to unlock the bot immediately!",
+            reply_markup=keyboard
+        )
         return
 
     # Add user to the loop

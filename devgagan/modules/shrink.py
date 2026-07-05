@@ -14,7 +14,7 @@
 # ---------------------------------------------------
 
 from pyrogram import Client, filters
-from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
 import random
 import requests
 import string
@@ -285,6 +285,33 @@ async def sharelink_handler(client, message: Message):
         f"Help others discover this bot that can save **restricted channel media**, even if forwarding is off! 🔒\n\n"
         f"Click a button below 👇 share me with your friends!",
         reply_markup=reply_markup
+    )
+
+
+@app.on_message(filters.command("token") & filters.private)
+async def token_command_handler(client, message: Message):
+    user_id = message.chat.id
+    freecheck = await chk_user(message, user_id)
+    if freecheck != 1:
+        await message.reply("You are a premium user and do not need a token! ✨")
+        return
+        
+    if await is_user_verified(user_id):
+        await message.reply("✅ You are already verified and have active access!")
+        return
+
+    web_url = WEBSITE_URL if "http" in WEBSITE_URL else f"https://{WEBSITE_URL}"
+    web_app_url = f"{web_url}/watch-ad?user_id={user_id}"
+    
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton("📺 Watch Ad to Verify", web_app=WebAppInfo(url=web_app_url))],
+        [InlineKeyboardButton("⭐ Get Premium", url="https://t.me/Chosen_One_x_bot")]
+    ])
+    
+    await message.reply(
+        "👋 **Get 3 Hours Free Access!**\n\n"
+        "Watch a short 15-second ad to verify and unlock unlimited bot usage for the next 3 hours. 🚀",
+        reply_markup=keyboard
     )
 
  
