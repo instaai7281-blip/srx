@@ -26,6 +26,8 @@ FREEMIUM_LIMIT = int(getenv("FREEMIUM_LIMIT", "3"))
 PREMIUM_LIMIT = int(getenv("PREMIUM_LIMIT", "5000"))
 WEBSITE_URL = getenv("WEBSITE_URL", "upshrink.com")
 AD_API = getenv("AD_API", "")
+NEW_REQ_MODE = getenv("NEW_REQ_MODE", "True").lower() == "true"
+BIO_CHANNEL = int(getenv("BIO_CHANNEL", "0"))
 STRING = getenv("STRING", None)
 STRINGS = getenv("STRINGS", "").split()
 # If legacy STRING is present, add it to STRINGS list
