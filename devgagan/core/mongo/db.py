@@ -143,4 +143,18 @@ async def load_all_thumbnails(thumbnail_dir):
         print(f"[INFO] Restored {count} custom thumbnails from MongoDB.")
     except Exception as e:
         print(f"[ERROR] Failed to restore custom thumbnails: {e}")
+
+# Settings database helpers for global configs (e.g. auth channel)
+settings_db = mongo.user_data.settings
+
+async def set_auth_channel(chat_id):
+    await settings_db.update_one(
+        {"_id": "auth_channel"},
+        {"$set": {"chat_id": chat_id}},
+        upsert=True
+    )
+
+async def get_auth_channel():
+    doc = await settings_db.find_one({"_id": "auth_channel"})
+    return doc.get("chat_id") if doc else None
  
