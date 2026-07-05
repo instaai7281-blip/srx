@@ -86,10 +86,14 @@ async def process_audio(client, event, url, cookies_env_var=None):
         cookies = os.getenv(cookies_env_var)
  
     temp_cookie_path = None
+    cookiefile_path = None
     if cookies:
         with tempfile.NamedTemporaryFile(delete=False, mode='w', suffix='.txt') as temp_cookie_file:
             temp_cookie_file.write(cookies)
             temp_cookie_path = temp_cookie_file.name
+        cookiefile_path = temp_cookie_path
+    elif os.path.exists("cookies.txt"):
+        cookiefile_path = os.path.abspath("cookies.txt")
  
     start_time = time.time()
     random_filename = f"@team_spy_pro_{event.sender_id}"
@@ -98,7 +102,7 @@ async def process_audio(client, event, url, cookies_env_var=None):
     ydl_opts = {
         'format': 'bestaudio/best',
         'outtmpl': f"{random_filename}.%(ext)s",
-        'cookiefile': temp_cookie_path,
+        'cookiefile': cookiefile_path,
         'postprocessors': [{'key': 'FFmpegExtractAudio', 'preferredcodec': 'mp3', 'preferredquality': '192'}],
         'quiet': False,
         'noplaylist': True,
@@ -247,6 +251,42 @@ async def handler(event):
     finally:
          
         ongoing_downloads.pop(user_id, None)
+
+
+@client.on(events.NewMessage(incoming=True, func=lambda e: e.is_private))
+async def direct_link_downloader(event):
+    import re
+    user_id = event.sender_id
+    text = event.message.text
+    if not text:
+        return
+    
+    if text.startswith('/'):
+        return
+        
+    match = re.search(r'(https?://[^\s]+)', text)
+    if not match:
+        return
+        
+    url = match.group(1)
+    is_yt = "youtube.com" in url or "youtu.be" in url
+    is_insta = "instagram.com" in url
+    
+    if is_yt or is_insta:
+        if user_id in ongoing_downloads:
+            await event.reply("**You already have an ongoing ytdlp download. Please wait until it completes!**")
+            return
+            
+        ongoing_downloads[user_id] = True
+        try:
+            if is_insta:
+                await process_video(client, event, url, "INSTA_COOKIES", check_duration_and_size=False)
+            elif is_yt:
+                await process_video(client, event, url, "YT_COOKIES", check_duration_and_size=True)
+        except Exception as e:
+            await event.reply(f"**An error occurred:** `{e}`")
+        finally:
+            ongoing_downloads.pop(user_id, None)
  
  
  
@@ -320,6 +360,7 @@ async def process_video(client, event, url, cookies_env_var, check_duration_and_
     logger.info(f"Received link: {url}")
      
     cookies = None
+    THUMB = None
     if cookies_env_var:
         cookies = os.getenv(cookies_env_var)
  
@@ -330,11 +371,15 @@ async def process_video(client, event, url, cookies_env_var, check_duration_and_
  
      
     temp_cookie_path = None
+    cookiefile_path = None
     if cookies:
         with tempfile.NamedTemporaryFile(delete=False, mode='w', suffix='.txt') as temp_cookie_file:
             temp_cookie_file.write(cookies)
             temp_cookie_path = temp_cookie_file.name
         logger.info(f"Created temporary cookie file at: {temp_cookie_path}")
+        cookiefile_path = temp_cookie_path
+    elif os.path.exists("cookies.txt"):
+        cookiefile_path = os.path.abspath("cookies.txt")
  
      
     thumbnail_file = None
@@ -344,7 +389,7 @@ async def process_video(client, event, url, cookies_env_var, check_duration_and_
     ydl_opts = {
         'outtmpl': download_path,
         'format': 'best',
-        'cookiefile': temp_cookie_path if temp_cookie_path else None,
+        'cookiefile': cookiefile_path,
         'writethumbnail': True,
         'verbose': True,
     }

@@ -168,9 +168,6 @@ async def on_help_navigation(client, callback_query):
     await callback_query.answer()
  
  
-from pyrogram import Client, filters
-from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
- 
 @app.on_message(filters.command("terms") & filters.private)
 async def terms(client, message):
     terms_text = (
@@ -183,7 +180,7 @@ async def terms(client, message):
     buttons = InlineKeyboardMarkup(
         [
             [InlineKeyboardButton("📋 See Plans", callback_data="see_plan")],
-            [InlineKeyboardButton("💬 Contact Now", url="0")],
+            [InlineKeyboardButton("💬 Contact Now", url="https://t.me/CHOSEN_ONEx_bot")],
         ]
     )
     await message.reply_text(terms_text, reply_markup=buttons)
@@ -192,47 +189,28 @@ async def terms(client, message):
 @app.on_message(filters.command("plans") & filters.private)
 async def plan(client, message):
     plan_text = (
-        "💎 **Upgrade to Premium** 💎\n\n"
-
-        "🚀 **Premium Features**\n"
-        "✅ No verification every 2 hours ⏳\n"
-        "✅ Upload in bulk (up to 2000 files) 📂\n"
-        "✅ Instantly skip the 300-second wait ⏱️\n"
-        "✅ Extract unlimited videos from channels, groups, and bots 🎥\n\n"
-
-        "🔹 **Free Plan**\n"
-        "⏳ Validity: Unlimited\n"
-        "💰 Price: ₹0 / $0.00 USDT\n"
-        "❌ Limited features\n"
-        "❌ Limited downloads\n\n"
-
-        "🔟 **7-Day Plan**\n"
-        "💰 Price: ₹30 / $0.50 USDT\n"
-        "⏳ Validity: 7 days\n"
-        "🎥 Extract unlimited videos\n\n"
-
-        "🌀 **15-Day Plan**\n"
-        "💰 Price: ₹60 / $0.90 USDT\n"
-        "⏳ Validity: 15 days\n"
-        "🎥 Extract unlimited videos\n\n"
-
-        "🏆 **Monthly Plan**\n"
-        "💰 Price: ₹90 / $1.20 USDT\n"
-        "⏳ Validity: 30 days\n"
-        "🎥 Extract unlimited videos\n"
-        "⚡ High Speed 🚀\n"
-        "═══════════════════"
-        "💰 Better Plans Then others 💯\n\n"
-        "📲 To Upgrade: Contact @CHOSEN_ONEx_bot\n\n"
-        "💳 Payment via UPI, Amazon Gift Card or USDT\n"
-        
+        "⚡ **𝗦𝗧𝗢𝗟𝗘𝗡 𝗛𝗔𝗣𝗣𝗜𝗡𝗘𝗦𝗦 𝗣𝗥𝗘𝗠𝗜𝗨𝗠** ⚡\n"
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+        "🚀 **PREMIUM BENEFITS:**\n"
+        "✦ **No Verification:** No captcha or ads ⏳\n"
+        "✦ **Bulk Uploads:** Queue up to **5000 files** at once 📂\n"
+        "✦ **No Waiting Time:** Instant extraction (0s cooldown) ⏱️\n"
+        "✦ **Unlimited Extraction:** From public/private chats 🎥\n"
+        "✦ **Custom Thumbnails:** Save personalized thumbnails 📸\n"
+        "✦ **Parallel Processing:** Max speed multi-chunk uploads ⚡\n\n"
+        "👑 **AVAILABLE PLANS:**\n"
+        "• **7-Day Plan:** ₹30 | $0.50 USDT\n"
+        "• **15-Day Plan:** ₹60 | $0.90 USDT\n"
+        "• **30-Day Plan:** ₹90 | $1.20 USDT (Max Speed 🚀)\n\n"
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        "📲 **To Upgrade:** Contact @CHOSEN_ONEx_bot\n"
+        "💳 **Payments:** UPI, Amazon Gift Card, or USDT (Crypto)"
     )
    
-     
     buttons = InlineKeyboardMarkup(
         [
             [InlineKeyboardButton("📜 See Terms", callback_data="see_terms")],
-            [InlineKeyboardButton("💬 Contact Now", url="https://t.me/CHOSEN_ONEx_bo")],
+            [InlineKeyboardButton("💬 Contact Now", url="https://t.me/CHOSEN_ONEx_bot")],
         ]
     )
     await message.reply_text(plan_text, reply_markup=buttons)
@@ -241,17 +219,24 @@ async def plan(client, message):
 @app.on_callback_query(filters.regex("see_plan"))
 async def see_plan(client, callback_query):
     plan_text = (
-        "> 💰**Premium Price**\n\n Starting from $2 or 200 INR accepted via **__Amazon Gift Card__** (terms and conditions apply).\n"
-        "📥 **Download Limit**: Users can download up to 100,000 files in a single batch command.\n"
-        "🛑 **Batch**: You will get two modes /bulk and /batch.\n"
-        "   - Users are advised to wait for the process to automatically cancel before proceeding with any downloads or uploads.\n\n"
-        "📜 **Terms and Conditions**: For further details and complete terms and conditions, please send /terms or click See Terms👇\n"
+        "⚡ **𝗦𝗧𝗢𝗟𝗘𝗡 𝗛𝗔𝗣𝗣𝗜𝗡𝗘𝗦𝗦 𝗣𝗥𝗘𝗠𝗜𝗨𝗠** ⚡\n"
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+        "💰 **Pricing & Upgrade Details:**\n"
+        "• **7 Days:** ₹30 | $0.50 USDT\n"
+        "• **15 Days:** ₹60 | $0.90 USDT\n"
+        "• **30 Days:** ₹90 | $1.20 USDT\n\n"
+        "🚀 **Key Features:**\n"
+        "• Queue up to **5000 files** in a single batch!\n"
+        "• Instant extraction (no cooldowns/captcha)\n"
+        "• Premium fast multi-threaded engine ⚡\n\n"
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        "📲 **To Upgrade:** Contact @CHOSEN_ONEx_bot"
     )
      
     buttons = InlineKeyboardMarkup(
         [
             [InlineKeyboardButton("📜 See Terms", callback_data="see_terms")],
-            [InlineKeyboardButton("💬 Contact Now", url="https://t.me/GeniusJunctionX")],
+            [InlineKeyboardButton("💬 Contact Now", url="https://t.me/CHOSEN_ONEx_bot")],
         ]
     )
     await callback_query.message.edit_text(plan_text, reply_markup=buttons)
@@ -269,7 +254,7 @@ async def see_terms(client, callback_query):
     buttons = InlineKeyboardMarkup(
         [
             [InlineKeyboardButton("📋 See Plans", callback_data="see_plan")],
-            [InlineKeyboardButton("💬 Contact Now", url="https://t.me/GeniusJunctionX")],
+            [InlineKeyboardButton("💬 Contact Now", url="https://t.me/CHOSEN_ONEx_bot")],
         ]
     )
     await callback_query.message.edit_text(terms_text, reply_markup=buttons)

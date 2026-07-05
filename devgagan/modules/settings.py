@@ -3,10 +3,12 @@ from pyrogram import filters, Client
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup, CallbackQuery
 from devgagan import app
 from devgagan.core.mongo import db
+from devgagan.core.get_func import get_user_branding_tag, set_user_branding_tag, get_user_custom_tags, add_user_custom_tag, delete_user_custom_tag, get_user_spoiler_preference, set_user_spoiler_preference
 
 # ────── Keyboards ──────
 
-def get_main_settings_keyboard():
+def get_main_settings_keyboard(user_id):
+    is_spoiler = get_user_spoiler_preference(user_id)
     buttons = [
         [
             InlineKeyboardButton("📝 Custom Caption", callback_data="settings_caption"),
@@ -18,9 +20,13 @@ def get_main_settings_keyboard():
         ],
         [
             InlineKeyboardButton("🧹 Text Cleaning", callback_data="settings_cleaning"),
-            InlineKeyboardButton("🔄 Reset All", callback_data="reset_all_settings")
+            InlineKeyboardButton("🏷️ Branding Tag", callback_data="settings_tag")
         ],
         [
+            InlineKeyboardButton(f"🌶️ Spoiler Mode: {'ON ✅' if is_spoiler else 'OFF ❌'}", callback_data="toggle_spoiler_settings")
+        ],
+        [
+            InlineKeyboardButton("🔄 Reset All", callback_data="reset_all_settings"),
             InlineKeyboardButton("❌ Close Menu", callback_data="close_settings")
         ]
     ]
@@ -80,18 +86,42 @@ def get_cleaning_keyboard(user_data):
     ]
     return InlineKeyboardMarkup(buttons)
 
+def get_tag_keyboard(user_id):
+    current_tag = get_user_branding_tag(user_id)
+    custom_tags = get_user_custom_tags(user_id)
+    buttons = []
+    
+    # 1) Stolen Happiness Preset
+    is_sh_selected = (current_tag == "🖤 Sᴛꪮʟᴇɴ Hᴀᴘᴘɪɴᴇss ⚝")
+    buttons.append([InlineKeyboardButton(f"🖤 Sᴛꪮʟᴇɴ Hᴀᴘᴘɪɴᴇss ⚝ {'✅' if is_sh_selected else ''}", callback_data="set_tag_stolenhappiness")])
+    
+    # 2) Custom saved tags (up to 5)
+    for i, tag in enumerate(custom_tags):
+        is_active = (current_tag == tag)
+        buttons.append([
+            InlineKeyboardButton(f"✨ {tag[:20]}... {'✅' if is_active else ''}" if len(tag) > 20 else f"✨ {tag} {'✅' if is_active else ''}", callback_data=f"set_tag_select_{i}"),
+            InlineKeyboardButton("❌", callback_data=f"set_tag_delete_{i}")
+        ])
+        
+    # 3) Add new custom tag button if less than 5
+    if len(custom_tags) < 5:
+        buttons.append([InlineKeyboardButton("➕ Add Custom Tag", callback_data="set_tag_add")])
+        
+    buttons.append([InlineKeyboardButton("🔙 Back to Menu", callback_data="back_to_main")])
+    return InlineKeyboardMarkup(buttons)
+
 # ────── Command Handler ──────
 
 @app.on_message(filters.command("settings") & filters.private)
 async def settings_command(client, message):
     await message.reply_text(
         "⚙️ **Personalize Your Experience**\n\nConfigure your extraction preferences, branding, and filters using the buttons below.",
-        reply_markup=get_main_settings_keyboard()
+        reply_markup=get_main_settings_keyboard(message.chat.id)
     )
 
 # ────── Navigation & Main Callbacks ──────
 
-@app.on_callback_query(filters.regex(r"^(settings_filters|back_to_main|close_settings|settings_thumb|settings_chatid|settings_cleaning)$"))
+@app.on_callback_query(filters.regex(r"^(settings_filters|back_to_main|close_settings|settings_thumb|settings_chatid|settings_cleaning|settings_tag)$"))
 async def main_nav_callback(client, callback_query: CallbackQuery):
     data = callback_query.data
     user_id = callback_query.from_user.id
@@ -103,7 +133,7 @@ async def main_nav_callback(client, callback_query: CallbackQuery):
     elif data == "back_to_main":
         await callback_query.message.edit_text(
             "⚙️ **Personalize Your Experience**\n\nConfigure your extraction preferences, branding, and filters using the buttons below.",
-            reply_markup=get_main_settings_keyboard()
+            reply_markup=get_main_settings_keyboard(user_id)
         )
     elif data == "settings_filters":
         await callback_query.message.edit_text(
@@ -136,6 +166,23 @@ async def main_nav_callback(client, callback_query: CallbackQuery):
         text += "> These rules apply to original captions before your custom caption is added."
         
         await callback_query.message.edit_text(text, reply_markup=get_cleaning_keyboard(user_data))
+    elif data == "settings_tag":
+        current_tag = user_data.get("branding_tag", "🖤 Sᴛꪮʟᴇɴ Hᴀᴘപ⚝")
+        current_tag = user_data.get("branding_tag", "🖤 Sᴛꪮʟᴇɴ Hᴀᴘᴘɪɴᴇss ⚝")
+        preview_text = (
+            f"🏷️ **Branding Tag Settings**\n"
+            f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+            f"Current Tag: `{current_tag}`\n\n"
+            f"📝 **How it will look in your captions:**\n"
+            f"> 📁 **File:** `movie_title.mp4`\n"
+            f"> ───\n"
+            f"> **{current_tag}**\n\n"
+            f"This branding tag appears in the captions of your files and on PDF document pages. Select a preset or set a custom tag below:"
+        )
+        await callback_query.message.edit_text(
+            preview_text,
+            reply_markup=get_tag_keyboard(callback_query.from_user.id)
+        )
 
 # ────── Caption Actions ──────
 
@@ -174,7 +221,7 @@ async def caption_actions_callback(client, callback_query: CallbackQuery):
             await db.set_caption(user_id, ask.text)
             await ask.reply(f"✅ **Caption updated successfully!**\n\n`{ask.text}`")
         
-        await asyncio.sleep(2)
+        await asyncio.sleep(0.5)
         await settings_command(client, ask)
         return
 
@@ -189,21 +236,39 @@ async def thumb_actions_callback(client, callback_query: CallbackQuery):
 
     if data == "delete_thumb":
         await db.remove_thumbnail(user_id)
+        from config import THUMBNAIL_DIR
+        import os
+        thumbnail_path = os.path.join(THUMBNAIL_DIR, f"{user_id}.jpg")
+        if os.path.exists(thumbnail_path):
+            try:
+                os.remove(thumbnail_path)
+            except Exception:
+                pass
         await callback_query.answer("Thumbnail deleted", show_alert=True)
     elif data == "set_new_thumb":
         await callback_query.message.delete()
         ask = await client.ask(user_id, "🖼️ **Send the photo you want to set as thumbnail.**\n\n> Send /cancel to abort.")
         
         if ask.photo:
-            thumb_path = await ask.download()
-            await db.set_thumbnail(user_id, thumb_path)
+            import os
+            from config import THUMBNAIL_DIR
+            from devgagan.core.func import optimize_thumbnail
+            thumbnail_path = os.path.join(THUMBNAIL_DIR, f"{user_id}.jpg")
+            await ask.download(file_name=thumbnail_path)
+            optimize_thumbnail(thumbnail_path)
+            try:
+                with open(thumbnail_path, "rb") as f:
+                    binary_data = f.read()
+                await db.set_thumbnail(user_id, binary_data)
+            except Exception as e:
+                print(f"[ERROR] Failed to save thumbnail to DB: {e}")
             await ask.reply("✅ **Thumbnail updated successfully!**")
         elif ask.text == "/cancel":
             await ask.reply("Action cancelled.")
         else:
             await ask.reply("❌ **Invalid input. Please send a photo.**")
         
-        await asyncio.sleep(2)
+        await asyncio.sleep(0.5)
         await settings_command(client, ask)
         return
 
@@ -234,7 +299,7 @@ async def chatid_actions_callback(client, callback_query: CallbackQuery):
             except ValueError:
                 await ask.reply("❌ **Invalid Chat ID format. Make sure it's a number starting with -100.**")
         
-        await asyncio.sleep(2)
+        await asyncio.sleep(0.5)
         await settings_command(client, ask)
         return
 
@@ -260,7 +325,7 @@ async def cleaning_actions_callback(client, callback_query: CallbackQuery):
             words = ask.text.split()
             await db.clean_words(user_id, words)
             await ask.reply(f"✅ **Added {len(words)} words to cleaning list.**")
-        await asyncio.sleep(2)
+        await asyncio.sleep(0.5)
         await settings_command(client, ask)
         return
     elif data == "set_replacement":
@@ -274,11 +339,73 @@ async def cleaning_actions_callback(client, callback_query: CallbackQuery):
             await ask.reply(f"✅ **Rule added:** `{to_replace}` ➜ `{replace_with}`")
         else:
              await ask.reply("❌ **Invalid format.**")
-        await asyncio.sleep(2)
+        await asyncio.sleep(0.5)
         await settings_command(client, ask)
         return
 
     await main_nav_callback(client, callback_query)
+
+# ────── Branding Tag Actions ──────
+
+@app.on_callback_query(filters.regex(r"^(set_tag_stolenhappiness|set_tag_add|set_tag_select_\d+|set_tag_delete_\d+)$"))
+async def tag_actions_callback(client, callback_query: CallbackQuery):
+    data = callback_query.data
+    user_id = callback_query.from_user.id
+
+    if data == "set_tag_stolenhappiness":
+        set_user_branding_tag(user_id, "🖤 Sᴛꪮʟᴇɴ Hᴀᴘᴘɪɴᴇss ⚝")
+        await callback_query.answer("Branding tag set to Stolen Happiness Preset")
+        
+    elif data == "set_tag_add":
+        custom_tags = get_user_custom_tags(user_id)
+        if len(custom_tags) >= 5:
+            await callback_query.answer("❌ You can save up to 5 custom tags only! Delete one first.", show_alert=True)
+            return
+            
+        await callback_query.message.delete()
+        ask = await client.ask(user_id, "🏷️ **Send your custom branding tag now.**\n\n> Send /cancel to abort.")
+        
+        if ask.text == "/cancel":
+            await ask.reply("Action cancelled.")
+        else:
+            success, msg = add_user_custom_tag(user_id, ask.text)
+            await ask.reply(f"{'✅' if success else '❌'} {msg}")
+        await asyncio.sleep(0.5)
+        await settings_command(client, ask)
+        return
+
+    elif data.startswith("set_tag_select_"):
+        tag_index = int(data.split("_")[-1])
+        custom_tags = get_user_custom_tags(user_id)
+        if 0 <= tag_index < len(custom_tags):
+            tag = custom_tags[tag_index]
+            set_user_branding_tag(user_id, tag)
+            await callback_query.answer(f"Selected: {tag}")
+        else:
+            await callback_query.answer("Invalid tag index")
+
+    elif data.startswith("set_tag_delete_"):
+        tag_index = int(data.split("_")[-1])
+        success, msg = delete_user_custom_tag(user_id, tag_index)
+        await callback_query.answer(msg, show_alert=True)
+
+    # Refresh page
+    user_data = await db.get_data(user_id) or {}
+    current_tag = user_data.get("branding_tag", "🖤 Sᴛꪮʟᴇɴ Hᴀᴘᴘɪɴᴇss ⚝")
+    preview_text = (
+        f"🏷️ **Branding Tag Settings**\n"
+        f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+        f"Current Tag: `{current_tag}`\n\n"
+        f"📝 **How it will look in your captions:**\n"
+        f"> 📁 **File:** `movie_title.mp4`\n"
+        f"> ───\n"
+        f"> **{current_tag}**\n\n"
+        f"This branding tag appears in the captions of your files and on PDF document pages. Select a preset or set a custom tag below:"
+    )
+    await callback_query.message.edit_text(
+        preview_text,
+        reply_markup=get_tag_keyboard(callback_query.from_user.id)
+    )
 
 # ────── Filter & Reset Actions ──────
 
@@ -308,6 +435,14 @@ async def reset_actions_callback(client, callback_query: CallbackQuery):
     elif data == "reset_all_settings":
         # Full wipe (except session/premium status if they exist elsewhere)
         await db.remove_thumbnail(user_id)
+        from config import THUMBNAIL_DIR
+        import os
+        thumbnail_path = os.path.join(THUMBNAIL_DIR, f"{user_id}.jpg")
+        if os.path.exists(thumbnail_path):
+            try:
+                os.remove(thumbnail_path)
+            except Exception:
+                pass
         await db.remove_caption(user_id)
         await db.remove_replace(user_id)
         await db.all_words_remove(user_id)
@@ -316,3 +451,16 @@ async def reset_actions_callback(client, callback_query: CallbackQuery):
     
     updated_data = await db.get_data(user_id) or {}
     await main_nav_callback(client, callback_query)
+
+# ────── Spoiler Settings Toggle ──────
+
+@app.on_callback_query(filters.regex(r"^toggle_spoiler_settings$"))
+async def toggle_spoiler_settings_callback(client, callback_query: CallbackQuery):
+    user_id = callback_query.from_user.id
+    current_val = get_user_spoiler_preference(user_id)
+    new_val = not current_val
+    set_user_spoiler_preference(user_id, new_val)
+    await callback_query.answer(f"Spoiler mode set to {'ON' if new_val else 'OFF'}")
+    await callback_query.message.edit_reply_markup(
+        reply_markup=get_main_settings_keyboard(user_id)
+    )
