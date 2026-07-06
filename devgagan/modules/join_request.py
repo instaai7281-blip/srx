@@ -17,8 +17,8 @@ from pyrogram.enums import ChatMemberStatus
 from pyrogram.types import ChatJoinRequest, InlineKeyboardButton, InlineKeyboardMarkup, Message
 from pyrogram.errors import PeerIdInvalid, UserNotMutualContact
 from devgagan import app
-from config import OWNER_ID, NEW_REQ_MODE, BIO_CHANNEL
-from devgagan.core.mongo.db import set_auth_channel, get_auth_channel
+from config import OWNER_ID, NEW_REQ_MODE
+from devgagan.core.mongo.db import set_auth_channel, get_auth_channel, set_bio_channel, get_bio_channel
 
 logger = logging.getLogger(__name__)
 
@@ -75,12 +75,14 @@ async def send_rich_approval_message(client: Client, user_id: int, chat, invite_
     except Exception as e:
         logger.warning(f"Could not DM approved user {user_id}: {e}")
 
-    if BIO_CHANNEL:
+    # Read bio log channel dynamically from DB
+    bio_channel_id = await get_bio_channel()
+    if bio_channel_id:
         try:
-            await client.send_message(BIO_CHANNEL, approve_text, disable_web_page_preview=True)
-            await client.send_sticker(BIO_CHANNEL, random.choice(stickers))
+            await client.send_message(bio_channel_id, approve_text, disable_web_page_preview=True)
+            await client.send_sticker(bio_channel_id, random.choice(stickers))
         except Exception as e:
-            logger.warning(f"Could not send to log group: {e}")
+            logger.warning(f"Could not send to bio log group {bio_channel_id}: {e}")
 
 
 @app.on_message(filters.command("setauth") & filters.user(OWNER_ID) & filters.private)
@@ -124,6 +126,49 @@ async def handle_set_auth(client: Client, message: Message):
         await message.reply(reply_msg)
     except Exception as e:
         await message.reply(f"❌ **Error:** {str(e)}\n\nMake sure the bot is an administrator in the channel!")
+
+
+@app.on_message(filters.command("setbio") & filters.user(OWNER_ID) & filters.private)
+async def handle_set_bio(client: Client, message: Message):
+    if len(message.command) < 2:
+        await message.reply(
+            "❌ **Usage:** `/setbio <channel_id_or_username>`\n\n"
+            "Example:\n"
+            "- `/setbio -100123456789`\n"
+            "- `/setbio @my_log_channel`\n"
+            "- `/setbio none` (to disable bio logs)"
+        )
+        return
+        
+    target = message.command[1]
+    if target.lower() == "none":
+        await set_bio_channel(None)
+        await message.reply("✅ **Bio Log Channel has been disabled!**")
+        return
+        
+    try:
+        if target.startswith("-100") or (target.startswith("-") and target[1:].isdigit()) or target.isdigit():
+            chat_id = int(target)
+        else:
+            chat_id = target
+            
+        chat = await client.get_chat(chat_id)
+        await set_bio_channel(chat.id)
+        
+        invite_link = chat.invite_link or (f"https://t.me/{chat.username}" if chat.username else None)
+        if not invite_link:
+            try:
+                invite_link = (await client.create_chat_invite_link(chat.id)).invite_link
+            except Exception:
+                pass
+                
+        reply_msg = f"✅ **Bio Log Channel updated successfully!**\n\n📌 **Title:** {chat.title}\n🆔 **ID:** `{chat.id}`"
+        if invite_link:
+            reply_msg += f"\n🔗 **Link:** {invite_link}"
+            
+        await message.reply(reply_msg)
+    except Exception as e:
+        await message.reply(f"❌ **Error:** {str(e)}\n\nMake sure the bot is an administrator in the channel so it can post logs!")
 
 
 @app.on_callback_query(filters.regex(r"^join_app:(.+)"))
