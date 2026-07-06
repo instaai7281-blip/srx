@@ -115,7 +115,10 @@ async def token_handler(client, message):
     except Exception as e:
         print(f"Error adding user in start command: {e}")
 
-    if len(message.command) <= 1:
+    param = message.command[1] if len(message.command) > 1 else None
+    is_verification = param and user_id in Param and Param[user_id] == param
+
+    if not is_verification:
         image_url = "https://freeimage.host/i/F5dGOsj"
         join_button = InlineKeyboardButton("✈️ Main Channel", url="https://t.me/II_LevelUP_II")
         premium_contact = InlineKeyboardButton("👑 𝗖𝗛𝗢𝗦𝗘𝗡 𝗢𝗡𝗘 ⚝", url="https://t.me/CHOSEN_ONEx_bot")
@@ -144,7 +147,6 @@ async def token_handler(client, message):
         )
         return
  
-    param = message.command[1] if len(message.command) > 1 else None
     freecheck = await chk_user(message, user_id)
     if freecheck != 1:
         await message.reply("You are a premium user Cutie 😉\n\n Just /start & Use Me  🫠")

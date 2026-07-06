@@ -33,14 +33,17 @@ async def send_rich_approval_message(client: Client, user_id: int, chat, invite_
     
     approve_text = (
         f"🎉 **Access Granted! Welcome to {chat.title}!** 🎉\n\n"
-        f"<b><blockquote> Cheers, <a href='https://t.me/{bot_info.username}'>{full_name}</a> ! 🥂</blockquote></b>\n\n"
-        f"Your request has been **automatically approved** successfully! ✅\n"
+        f"<blockquote><b>Cheers, <a href='https://t.me/{bot_info.username}'>{full_name}</a> ! 🥂</b></blockquote>\n\n"
+        f"Your request to join **<a href='{invite_link}'>{chat.title}</a>** has been **automatically approved** successfully! ✅\n"
         f"We're thrilled to have you with us. Enjoy your time here! 🥰\n\n"
         f"⚡ *Need to save restricted content, download videos, or bypass copy restrictions? Start me now!* 👇"
     )
     
     keyboard = InlineKeyboardMarkup([
-        [InlineKeyboardButton("🤖 Start Me", url=f"https://t.me/{bot_info.username}?start=True")]
+        [
+            InlineKeyboardButton("🔗 Enter Channel", url=invite_link),
+            InlineKeyboardButton("🤖 Start Bot", url=f"https://t.me/{bot_info.username}?start=True")
+        ]
     ])
     
     try:
