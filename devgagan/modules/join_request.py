@@ -1,7 +1,7 @@
 # ---------------------------------------------------
 # File Name: join_request.py
 # Description: Automatically approves pending join requests based on bio-tags 
-#              or auth channel membership.
+#              or auth channel membership, and sends welcoming rich messages.
 # Author: Gagan
 # GitHub: https://github.com/devgaganin/
 # Telegram: https://t.me/team_spy_pro
@@ -13,6 +13,7 @@ import random
 import logging
 import asyncio
 from pyrogram import Client, filters
+from pyrogram.enums import ChatMemberStatus
 from pyrogram.types import ChatJoinRequest, InlineKeyboardButton, InlineKeyboardMarkup, Message
 from pyrogram.errors import PeerIdInvalid, UserNotMutualContact
 from devgagan import app
@@ -44,6 +45,42 @@ def has_required_tag_in_bio(user_bio: str, required_tags: list):
         return False
     user_bio = user_bio.lower()
     return any(tag.lower() in user_bio for tag in required_tags)
+
+
+async def send_rich_approval_message(client: Client, user_id: int, chat, invite_link: str, full_name: str):
+    stickers = [
+        "CAACAgUAAxkBAAEB8BlosDGCxtVBNBGV3vK2CKmR87rstQACwxoAAit2eVeMbZ7zpZHiGB4E",
+        "CAACAgUAAxkBAAKcH2f94mJ3mIfgQeXmv4j0PlEpIgYMAAJvFAACKP14V1j51qcs1b2wHgQ",
+        "CAACAgUAAxkBAAJLXmf2ThTMZwF8_lu8ZEwzHvRaouKUAAL9FAACiFywV69qth3g-gb4HgQ"
+    ]
+    member_count = getattr(chat, 'members_count', 0) or 0
+    
+    approve_text = (
+        f"🔓 <b>Access Granted ✅</b>\n\n"
+        f"<b><blockquote> Cheers, <a href='https://t.me/II_LevelUP_II'>{full_name}</a> ! 🥂</blockquote></b>\n"
+        f"Your Request To Join <b><a href='{invite_link}'> {chat.title} </a></b> Has Been Approved! 🎉\n"
+        f"We’re happy to have you with us. 🥰\n\n"
+        f"💎 𝐌𝐞𝐦𝐛𝐞𝐫𝐬 𝐂𝐨𝐮𝐧𝐭: <b>{member_count:,}</b> 🚀\n"
+        f"▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰\n"
+    )
+    
+    bot_info = await client.get_me()
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton("🤖 Start Me", url=f"https://t.me/{bot_info.username}?start=True")]
+    ])
+    
+    try:
+        await client.send_message(user_id, approve_text, disable_web_page_preview=True, reply_markup=keyboard)
+        await client.send_sticker(user_id, random.choice(stickers))
+    except Exception as e:
+        logger.warning(f"Could not DM approved user {user_id}: {e}")
+
+    if BIO_CHANNEL:
+        try:
+            await client.send_message(BIO_CHANNEL, approve_text, disable_web_page_preview=True)
+            await client.send_sticker(BIO_CHANNEL, random.choice(stickers))
+        except Exception as e:
+            logger.warning(f"Could not send to log group: {e}")
 
 
 @app.on_message(filters.command("setauth") & filters.user(OWNER_ID) & filters.private)
@@ -106,15 +143,27 @@ async def handle_join_verification(client: Client, callback_query):
         
     try:
         member = await client.get_chat_member(chat_id=auth_channel_id, user_id=user_id)
-        is_member = member.status in ["member", "administrator", "creator", "restricted"]
+        is_member = member.status in [
+            ChatMemberStatus.MEMBER,
+            ChatMemberStatus.ADMINISTRATOR,
+            ChatMemberStatus.OWNER,
+            ChatMemberStatus.RESTRICTED
+        ]
     except Exception:
         is_member = False
         
     if is_member:
         try:
+            chat = await client.get_chat(target_chat_id)
+            invite_link = chat.invite_link or (f"https://t.me/{chat.username}" if chat.username else "https://t.me")
+            full_name = f"{callback_query.from_user.first_name or ''} {callback_query.from_user.last_name or ''}".strip()
+            
             await client.approve_chat_join_request(chat_id=target_chat_id, user_id=user_id)
             await callback_query.answer("✅ Verification successful! Your request has been approved.", show_alert=True)
             await callback_query.message.edit_text("🎉 **Approved! Welcome to the channel!**")
+            
+            # Send rich welcome message
+            await send_rich_approval_message(client, user_id, chat, invite_link, full_name)
         except Exception as e:
             await callback_query.answer(f"❌ Failed to approve: {str(e)}", show_alert=True)
     else:
@@ -162,21 +211,15 @@ async def join_request_handler(client: Client, m: ChatJoinRequest):
                     invite_link = "https://t.me"
 
             full_name = f"{m.from_user.first_name or ''} {m.from_user.last_name or ''}".strip()
-            member_count = getattr(chat, 'members_count', 0) or 0
 
             if has_required_tag_in_bio(bio, required_tags):
                 # Approve join request
                 await client.approve_chat_join_request(m.chat.id, m.from_user.id)
+                
+                # Send rich welcome message
+                await send_rich_approval_message(client, m.from_user.id, chat, invite_link, full_name)
 
-                approve_text = (
-                    f"🔓 <b>Access Granted ✅</b>\n\n"
-                    f"<b><blockquote> Cheers, <a href='https://t.me/II_LevelUP_II'>{full_name}</a> ! 🥂</blockquote></b>\n"
-                    f"Your Request To Join <b><a href='{invite_link}'> {chat.title} </a></b> Has Been Approved! 🎉\n"
-                    f"We’re happy to have you with us. 🥰\n\n"
-                    f"💎 𝐌𝐞𝐦𝐛𝐞𝐫𝐬 𝐂𝐨𝐮𝐧𝐭: <b>{member_count:,}</b> 🚀\n"
-                    f"▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰\n"
-                )
-
+                # Send warning about tag removal
                 warning_text = (
                     f"⚠️⚠️⚠️\n"
                     f"<b><i>"
@@ -187,18 +230,9 @@ async def join_request_handler(client: Client, m: ChatJoinRequest):
                 )
 
                 try:
-                    await client.send_message(m.from_user.id, approve_text, disable_web_page_preview=True)
                     await client.send_message(m.from_user.id, warning_text, disable_web_page_preview=True)
-                    await client.send_sticker(m.from_user.id, random.choice(stickers))
                 except Exception as e:
-                    logger.warning(f"Could not DM approved user: {e}")
-
-                if BIO_CHANNEL:
-                    try:
-                        await client.send_message(BIO_CHANNEL, approve_text, disable_web_page_preview=True)
-                        await client.send_sticker(BIO_CHANNEL, random.choice(stickers))
-                    except Exception as e:
-                        logger.warning(f"Could not send to log group: {e}")
+                    logger.warning(f"Could not send bio warning: {e}")
             else:
                 # User doesn't have the tag in bio -> instruct them
                 tags_display = '\n'.join([f"<blockquote>● <code>{tag}</code> ♡</blockquote>" for tag in required_tags])
@@ -243,7 +277,12 @@ async def join_request_handler(client: Client, m: ChatJoinRequest):
         if auth_channel_id:
             try:
                 member = await client.get_chat_member(chat_id=auth_channel_id, user_id=m.from_user.id)
-                is_member = member.status in ["member", "administrator", "creator", "restricted"]
+                is_member = member.status in [
+                    ChatMemberStatus.MEMBER,
+                    ChatMemberStatus.ADMINISTRATOR,
+                    ChatMemberStatus.OWNER,
+                    ChatMemberStatus.RESTRICTED
+                ]
             except Exception:
                 is_member = False
                 
@@ -280,26 +319,10 @@ async def join_request_handler(client: Client, m: ChatJoinRequest):
         # Approve and welcome for standard join request
         await client.approve_chat_join_request(chat.id, m.from_user.id)
         
-        welcome_text = (
-            f"✨ **Welcome to {chat.title}, {m.from_user.first_name}!** ✨\n\n"
-            f"🎉 Your request to join the channel has been **automatically approved** successfully! ✅\n\n"
-            f"🤖 *Need to save restricted content, download videos, or bypass copy restrictions?* I can help you with that! Feel free to start me. 😉\n\n"
-            f"⚡ **Powered by CHOSEN ONE ⚝**"
-        )
+        invite_link = chat.invite_link or (f"https://t.me/{chat.username}" if chat.username else "https://t.me")
+        full_name = f"{m.from_user.first_name or ''} {m.from_user.last_name or ''}".strip()
         
-        bot_info = await client.get_me()
-        keyboard = InlineKeyboardMarkup([
-            [InlineKeyboardButton("🤖 Start Me", url=f"https://t.me/{bot_info.username}?start=True")]
-        ])
-        
-        try:
-            await client.send_message(
-                chat_id=m.from_user.id,
-                text=welcome_text,
-                reply_markup=keyboard
-            )
-        except Exception as pm_error:
-            logger.warning(f"Welcome message could not be sent to {m.from_user.id}: {pm_error}")
+        await send_rich_approval_message(client, m.from_user.id, chat, invite_link, full_name)
 
     except Exception as e:
         logger.error(f"Join request handler error: {e}")
