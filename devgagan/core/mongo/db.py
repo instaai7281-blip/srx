@@ -168,4 +168,15 @@ async def set_bio_channel(chat_id):
 async def get_bio_channel():
     doc = await settings_db.find_one({"_id": "bio_channel"})
     return doc.get("chat_id") if doc else None
+
+async def set_log_channel(chat_id):
+    await settings_db.update_one(
+        {"_id": "log_channel"},
+        {"$set": {"chat_id": chat_id}},
+        upsert=True
+    )
+
+async def get_log_channel():
+    doc = await settings_db.find_one({"_id": "log_channel"})
+    return doc.get("chat_id") if doc else None
  
