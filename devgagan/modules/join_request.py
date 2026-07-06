@@ -36,8 +36,8 @@ async def send_rich_approval_message(client: Client, user_id: int, chat, invite_
         f"<blockquote><b>Cheers, <a href='https://t.me/{bot_info.username}'>{full_name}</a>! 🥂</b></blockquote>\n\n"
         f"Your request to join the channel <b><a href='{invite_link}'>{chat.title}</a></b> has been <b>approved</b> successfully! ✅\n\n"
         f"⚠️ <b><u>CRITICAL WARNING</u></b> ⚠️\n"
-        f"<i>Do NOT leave our main Updates Channel!\n"
-        f"If you leave, our system will automatically remove u from <b>ALL</b> channels and groups. Keep your membership active to maintain lifetime access!</i> 💀\n\n"
+        f"<i>If you leave Updates Channel! our system will automatically remove u from <b>ALL</b> channels and groups.\n"
+        f"Keep your membership active to maintain lifetime access!</i> 💀\n\n"
         f"<i>⚡ Need to save restricted content, download videos, or bypass copy restrictions? Tap 'Start Bot' below to begin!</i> 👇"
     )
     
@@ -56,7 +56,6 @@ async def send_rich_approval_message(client: Client, user_id: int, chat, invite_
             disable_web_page_preview=True,
             reply_markup=keyboard
         )
-        await client.send_sticker(user_id, random.choice(stickers))
     except Exception as e:
         logger.warning(f"Could not DM approved user {user_id}: {e}")
 
@@ -70,7 +69,6 @@ async def send_rich_approval_message(client: Client, user_id: int, chat, invite_
                 parse_mode=ParseMode.HTML,
                 disable_web_page_preview=True
             )
-            await client.send_sticker(log_channel_id, random.choice(stickers))
         except Exception as e:
             logger.warning(f"Could not send log to channel {log_channel_id}: {e}")
 
