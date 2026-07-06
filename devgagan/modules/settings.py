@@ -9,6 +9,9 @@ from devgagan.core.get_func import get_user_branding_tag, set_user_branding_tag,
 
 def get_main_settings_keyboard(user_id):
     is_spoiler = get_user_spoiler_preference(user_id)
+    from devgagan.core.get_func import get_user_forward_preference, get_user_keep_original_caption
+    is_forward = get_user_forward_preference(user_id)
+    is_keep_caption = get_user_keep_original_caption(user_id)
     buttons = [
         [
             InlineKeyboardButton("📝 Custom Caption", callback_data="settings_caption"),
@@ -21,6 +24,10 @@ def get_main_settings_keyboard(user_id):
         [
             InlineKeyboardButton("🧹 Text Cleaning", callback_data="settings_cleaning"),
             InlineKeyboardButton("🏷️ Branding Tag", callback_data="settings_tag")
+        ],
+        [
+            InlineKeyboardButton(f"🚀 Direct Forward: {'ON ✅' if is_forward else 'OFF ❌'}", callback_data="toggle_forward_settings"),
+            InlineKeyboardButton(f"📦 Keep Caption: {'Original ✅' if is_keep_caption else 'Cleaned ❌'}", callback_data="toggle_keep_caption_settings")
         ],
         [
             InlineKeyboardButton(f"🌶️ Spoiler Mode: {'ON ✅' if is_spoiler else 'OFF ❌'}", callback_data="toggle_spoiler_settings")
@@ -461,6 +468,30 @@ async def toggle_spoiler_settings_callback(client, callback_query: CallbackQuery
     new_val = not current_val
     set_user_spoiler_preference(user_id, new_val)
     await callback_query.answer(f"Spoiler mode set to {'ON' if new_val else 'OFF'}")
+    await callback_query.message.edit_reply_markup(
+        reply_markup=get_main_settings_keyboard(user_id)
+    )
+
+@app.on_callback_query(filters.regex(r"^toggle_forward_settings$"))
+async def toggle_forward_settings_callback(client, callback_query: CallbackQuery):
+    user_id = callback_query.from_user.id
+    from devgagan.core.get_func import get_user_forward_preference, set_user_forward_preference
+    current_val = get_user_forward_preference(user_id)
+    new_val = not current_val
+    set_user_forward_preference(user_id, new_val)
+    await callback_query.answer(f"Direct Forward set to {'ON' if new_val else 'OFF'}")
+    await callback_query.message.edit_reply_markup(
+        reply_markup=get_main_settings_keyboard(user_id)
+    )
+
+@app.on_callback_query(filters.regex(r"^toggle_keep_caption_settings$"))
+async def toggle_keep_caption_settings_callback(client, callback_query: CallbackQuery):
+    user_id = callback_query.from_user.id
+    from devgagan.core.get_func import get_user_keep_original_caption, set_user_keep_original_caption
+    current_val = get_user_keep_original_caption(user_id)
+    new_val = not current_val
+    set_user_keep_original_caption(user_id, new_val)
+    await callback_query.answer(f"Keep Original Caption set to {'Original' if new_val else 'Cleaned'}")
     await callback_query.message.edit_reply_markup(
         reply_markup=get_main_settings_keyboard(user_id)
     )

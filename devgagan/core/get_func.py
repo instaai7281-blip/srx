@@ -661,10 +661,42 @@ async def get_msg(userbot: TelegramClient, sender: int, edit_id: int, msg_link: 
         # Check if the channel is protected
         if chat in saved_channel_ids:
             await app.edit_message_text(
-                message.chat.id, edit_id,
+                sender, edit_id,
                 "This channel is protected by **__CHOSEN ONE ⚝__💀**.\nKya Be... Hamara Hi Content Nikalega 🌝 Kahi Or Try Kar 😘"
             )
             return
+
+        # Check if Direct Forward is enabled for public links
+        is_private = 't.me/c/' in msg_link or 't.me/b/' in msg_link or 'tg://openmessage' in msg_link
+        is_direct_forward_enabled = get_user_forward_preference(sender)
+        
+        if not is_private and is_direct_forward_enabled:
+            edit = await app.edit_message_text(sender, edit_id, "Directly forwarding post... 🚀")
+            try:
+                client_to_use = userbot if userbot else app
+                chat_resolved = chat
+                if isinstance(chat, str) and not chat.startswith("-") and not chat.isdigit():
+                    try:
+                        chat_entity = await client_to_use.get_chat(chat)
+                        chat_resolved = chat_entity.id
+                    except Exception:
+                        pass
+                
+                target_chat_id = get_target_chat_id(sender)
+                topic_id = None
+                if '/' in str(target_chat_id):
+                    target_chat_id, topic_id = map(int, target_chat_id.split('/', 1))
+                
+                await client_to_use.forward_messages(
+                    chat_id=target_chat_id,
+                    from_chat_id=chat_resolved,
+                    message_ids=msg_id,
+                    reply_to_message_id=topic_id
+                )
+                await edit.delete(2)
+                return
+            except Exception as forward_err:
+                print(f"Direct forward failed: {forward_err}")
 
         # Determine if we should try a fast copy or force download
         is_private = 't.me/c/' in msg_link or 't.me/b/' in msg_link or 'tg://openmessage' in msg_link
@@ -1095,7 +1127,7 @@ async def copy_message_with_chat_id(app, userbot, sender, chat_id, message_id, e
         final_caption = format_caption(msg.caption or '', sender, custom_caption, filename=filename)
         
         # Force blockquote tag for PDF files
-        if msg.document and ((msg.document.file_name and msg.document.file_name.lower().endswith('.pdf')) or msg.document.mime_type == 'application/pdf') and not msg.caption:
+        if msg.document and ((msg.document.file_name and msg.document.file_name.lower().endswith('.pdf')) or msg.document.mime_type == 'application/pdf') and not msg.caption and not get_user_keep_original_caption(sender):
             orig_filename = msg.document.file_name or "document.pdf"
             # Aggressively clean up original filename to remove others' tags
             clean_filename_base = remove_chaudhary_fancy(orig_filename)
@@ -1249,7 +1281,7 @@ async def send_media_message(app, target_chat_id, msg, caption, topic_id, sender
             file_name = msg.video.file_name
 
         # Caption handling
-        if msg.document and ((msg.document.file_name and msg.document.file_name.lower().endswith('.pdf')) or msg.document.mime_type == 'application/pdf') and not msg.caption:
+        if msg.document and ((msg.document.file_name and msg.document.file_name.lower().endswith('.pdf')) or msg.document.mime_type == 'application/pdf') and not msg.caption and not get_user_keep_original_caption(sender):
             orig_filename = msg.document.file_name or "document.pdf"
             # Aggressively clean up original filename to remove others' tags
             clean_filename_base = remove_chaudhary_fancy(orig_filename)
@@ -1425,6 +1457,10 @@ def format_caption(original_caption, sender, custom_caption, filename=None):
         original_caption = apply_custom_caption_placeholders(custom_caption, original_caption, filename)
         return original_caption
 
+    # If keep original caption is enabled, return the original caption exactly as it is (no branding or blockquotes added)
+    if get_user_keep_original_caption(sender):
+        return original_caption if original_caption else None
+
     # Build final blockquote caption
     if original_caption:
         return f"{original_caption}\n\n> **{branding_tag}**"
@@ -1519,6 +1555,48 @@ BRANDING_TAGS = {
     "stolenhappiness": "🖤 Sᴛꪮʟᴇɴ Hᴀᴘᴘɪɴᴇss ⚝",
 }
 DEFAULT_BRANDING_TAG = "🖤 Sᴛꪮʟᴇɴ Hᴀᴘᴘɪɴᴇss ⚝"
+
+def get_user_forward_preference(user_id) -> bool:
+    try:
+        user_data = collection.find_one({"_id": int(user_id)})
+        if not user_data:
+            user_data = collection.find_one({"_id": str(user_id)})
+        if user_data:
+            return user_data.get("direct_forward", False)
+    except Exception as e:
+        print(f"Error getting forward preference: {e}")
+    return False
+
+def set_user_forward_preference(user_id, value: bool):
+    try:
+        collection.update_one(
+            {"_id": int(user_id)},
+            {"$set": {"direct_forward": value}},
+            upsert=True
+        )
+    except Exception as e:
+        print(f"Error setting forward preference: {e}")
+
+def get_user_keep_original_caption(user_id) -> bool:
+    try:
+        user_data = collection.find_one({"_id": int(user_id)})
+        if not user_data:
+            user_data = collection.find_one({"_id": str(user_id)})
+        if user_data:
+            return user_data.get("keep_original_caption", False)
+    except Exception as e:
+        print(f"Error getting keep original caption: {e}")
+    return False
+
+def set_user_keep_original_caption(user_id, value: bool):
+    try:
+        collection.update_one(
+            {"_id": int(user_id)},
+            {"$set": {"keep_original_caption": value}},
+            upsert=True
+        )
+    except Exception as e:
+        print(f"Error setting keep original caption: {e}")
 
 def get_user_branding_tag(user_id):
     """Get user's selected branding tag from MongoDB."""
