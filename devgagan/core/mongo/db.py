@@ -147,16 +147,42 @@ async def load_all_thumbnails(thumbnail_dir):
 # Settings database helpers for global configs (e.g. auth channel)
 settings_db = mongo.user_data.settings
 
-async def set_auth_channel(chat_id):
+async def get_auth_channels():
+    doc = await settings_db.find_one({"_id": "auth_channels_list"})
+    if doc:
+        return doc.get("chat_ids", [])
+    old = await settings_db.find_one({"_id": "auth_channel"})
+    if old and old.get("chat_id"):
+        return [old.get("chat_id")]
+    return []
+
+async def add_auth_channel(chat_id):
+    channels = await get_auth_channels()
+    if chat_id not in channels:
+        channels.append(chat_id)
+        await settings_db.update_one(
+            {"_id": "auth_channels_list"},
+            {"$set": {"chat_ids": channels}},
+            upsert=True
+        )
+
+async def remove_auth_channel(chat_id):
+    channels = await get_auth_channels()
+    if chat_id in channels:
+        channels.remove(chat_id)
+        await settings_db.update_one(
+            {"_id": "auth_channels_list"},
+            {"$set": {"chat_ids": channels}},
+            upsert=True
+        )
+
+async def clear_auth_channels():
     await settings_db.update_one(
-        {"_id": "auth_channel"},
-        {"$set": {"chat_id": chat_id}},
+        {"_id": "auth_channels_list"},
+        {"$set": {"chat_ids": []}},
         upsert=True
     )
-
-async def get_auth_channel():
-    doc = await settings_db.find_one({"_id": "auth_channel"})
-    return doc.get("chat_id") if doc else None
+    await settings_db.delete_one({"_id": "auth_channel"})
 
 async def set_bio_channel(chat_id):
     await settings_db.update_one(
