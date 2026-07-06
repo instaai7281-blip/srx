@@ -13,7 +13,7 @@ import random
 import logging
 import asyncio
 from pyrogram import Client, filters
-from pyrogram.enums import ChatMemberStatus
+from pyrogram.enums import ChatMemberStatus, ParseMode
 from pyrogram.types import ChatJoinRequest, InlineKeyboardButton, InlineKeyboardMarkup, Message
 from pyrogram.errors import PeerIdInvalid, UserNotMutualContact
 from devgagan import app
@@ -36,7 +36,8 @@ async def send_rich_approval_message(client: Client, user_id: int, chat, invite_
         f"<blockquote><b>Cheers, <a href='https://t.me/{bot_info.username}'>{full_name}</a>! 🥂</b></blockquote>\n\n"
         f"Your request to join the channel <b><a href='{invite_link}'>{chat.title}</a></b> has been <b>approved</b> successfully! ✅\n\n"
         f"⚠️ <b><u>CRITICAL WARNING</u></b> ⚠️\n"
-        f"<i>Do NOT leave our main Updates Channel! If you leave, our system will automatically revoke your access and remove you from <b>ALL</b> channels and groups linked to this bot. Keep your membership active to maintain lifetime access!</i> 💀\n\n"
+        f"<i>Do NOT leave our main Updates Channel!\n"
+        f"If you leave, our system will automatically remove u from <b>ALL</b> channels and groups. Keep your membership active to maintain lifetime access!</i> 💀\n\n"
         f"<i>⚡ Need to save restricted content, download videos, or bypass copy restrictions? Tap 'Start Bot' below to begin!</i> 👇"
     )
     
@@ -48,7 +49,13 @@ async def send_rich_approval_message(client: Client, user_id: int, chat, invite_
     ])
     
     try:
-        await client.send_message(user_id, approve_text, disable_web_page_preview=True, reply_markup=keyboard)
+        await client.send_message(
+            chat_id=user_id,
+            text=approve_text,
+            parse_mode=ParseMode.HTML,
+            disable_web_page_preview=True,
+            reply_markup=keyboard
+        )
         await client.send_sticker(user_id, random.choice(stickers))
     except Exception as e:
         logger.warning(f"Could not DM approved user {user_id}: {e}")
@@ -57,7 +64,12 @@ async def send_rich_approval_message(client: Client, user_id: int, chat, invite_
     log_channel_id = await get_log_channel()
     if log_channel_id:
         try:
-            await client.send_message(log_channel_id, approve_text, disable_web_page_preview=True)
+            await client.send_message(
+                chat_id=log_channel_id,
+                text=approve_text,
+                parse_mode=ParseMode.HTML,
+                disable_web_page_preview=True
+            )
             await client.send_sticker(log_channel_id, random.choice(stickers))
         except Exception as e:
             logger.warning(f"Could not send log to channel {log_channel_id}: {e}")
@@ -159,7 +171,10 @@ async def handle_join_verification(client: Client, callback_query):
         try:
             await client.approve_chat_join_request(chat_id=target_chat_id, user_id=user_id)
             await callback_query.answer("✅ Approved successfully!", show_alert=True)
-            await callback_query.message.edit_text("🎉 **Approved! Welcome to the channel!**")
+            await callback_query.message.edit_text(
+                text="🎉 <b>Approved! Welcome to the channel!</b>",
+                parse_mode=ParseMode.HTML
+            )
         except Exception as e:
             await callback_query.answer(f"❌ Error: {str(e)}", show_alert=True)
         return
@@ -183,7 +198,10 @@ async def handle_join_verification(client: Client, callback_query):
             
             await client.approve_chat_join_request(chat_id=target_chat_id, user_id=user_id)
             await callback_query.answer("✅ Verification successful! Your request has been approved.", show_alert=True)
-            await callback_query.message.edit_text("🎉 **Approved! Welcome to the channel!**")
+            await callback_query.message.edit_text(
+                text="🎉 <b>Approved! Welcome to the channel!</b>",
+                parse_mode=ParseMode.HTML
+            )
             
             # Send rich welcome message
             await send_rich_approval_message(client, user_id, chat, invite_link, full_name)
@@ -234,8 +252,8 @@ async def join_request_handler(client: Client, m: ChatJoinRequest):
             if is_member:
                 # User has joined auth channel (or no auth channel set)
                 welcome_text = (
-                    f"✨ **Hello {m.from_user.first_name}!** ✨\n\n"
-                    f"Your request to join **{chat.title}** is currently **pending**... ⏳\n\n"
+                    f"✨ <b>Hello {m.from_user.first_name}!</b> ✨\n\n"
+                    f"Your request to join <b>{chat.title}</b> is currently <b>pending</b>... ⏳\n\n"
                     f"👇 Please click the button below to verify and approve your request instantly!"
                 )
                 keyboard = InlineKeyboardMarkup([
@@ -244,11 +262,11 @@ async def join_request_handler(client: Client, m: ChatJoinRequest):
             else:
                 # User has NOT joined the updates channel
                 welcome_text = (
-                    f"✨ **Hello {m.from_user.first_name}!** ✨\n\n"
-                    f"Your request to join **{chat.title}** is currently **pending**... ⏳\n\n"
-                    f"📢 **Verification Required:**\n"
+                    f"✨ <b>Hello {m.from_user.first_name}!</b> ✨\n\n"
+                    f"Your request to join <b>{chat.title}</b> is currently <b>pending</b>... ⏳\n\n"
+                    f"📢 <b><u>Verification Required</u>:</b>\n"
                     f"To gain access, you must first join our updates channel! This helps us keep you informed about important updates. 😉\n\n"
-                    f"👇 Please click the button below to join, then tap **Verify & Approve** to unlock access instantly!"
+                    f"👇 Please click the button below to join, then tap <b>Verify & Approve</b> to unlock access instantly!"
                 )
                 keyboard = InlineKeyboardMarkup([
                     [InlineKeyboardButton("🔴 Join Updates Channel 📢", url=invite_link)],
@@ -258,6 +276,7 @@ async def join_request_handler(client: Client, m: ChatJoinRequest):
             await client.send_message(
                 chat_id=m.from_user.id,
                 text=welcome_text,
+                parse_mode=ParseMode.HTML,
                 reply_markup=keyboard
             )
         except Exception as pm_error:
