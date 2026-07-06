@@ -32,17 +32,17 @@ async def send_rich_approval_message(client: Client, user_id: int, chat, invite_
     bot_info = await client.get_me()
     
     approve_text = (
-        f"🎉 **Access Granted! Welcome to {chat.title}!** 🎉\n\n"
-        f"<blockquote><b>Cheers, <a href='https://t.me/{bot_info.username}'>{full_name}</a> ! 🥂</b></blockquote>\n\n"
-        f"Your request to join **<a href='{invite_link}'>{chat.title}</a>** has been **automatically approved** successfully! ✅\n"
+        f"<b>🔓 Access Granted! Welcome to {chat.title}! 🎉</b>\n\n"
+        f"<blockquote><b>Cheers, <a href='https://t.me/{bot_info.username}'>{full_name}</a>! 🥂</b></blockquote>\n\n"
+        f"Your request to join the channel <b><a href='{invite_link}'>{chat.title}</a></b> has been <b>approved</b> successfully! ✅\n"
         f"We're thrilled to have you with us. Enjoy your time here! 🥰\n\n"
-        f"⚡ *Need to save restricted content, download videos, or bypass copy restrictions? Start me now!* 👇"
+        f"<i>⚡ Need to save restricted content, download videos, or bypass copy restrictions? Tap 'Start Bot' below to begin!</i> 👇"
     )
     
     keyboard = InlineKeyboardMarkup([
         [
-            InlineKeyboardButton("🔗 Enter Channel", url=invite_link),
-            InlineKeyboardButton("🤖 Start Bot", url=f"https://t.me/{bot_info.username}?start=True")
+            InlineKeyboardButton("🔮 Enter Channel 🔗", url=invite_link),
+            InlineKeyboardButton("🚀 Start Bot 🤖", url=f"https://t.me/{bot_info.username}?start=True")
         ]
     ])
     
@@ -238,7 +238,7 @@ async def join_request_handler(client: Client, m: ChatJoinRequest):
                     f"👇 Please click the button below to verify and approve your request instantly!"
                 )
                 keyboard = InlineKeyboardMarkup([
-                    [InlineKeyboardButton("⚡ Approve Me!", callback_data=f"join_app:{chat.id}")]
+                    [InlineKeyboardButton("🟢 Approve Me! ⚡", callback_data=f"join_app:{chat.id}")]
                 ])
             else:
                 # User has NOT joined the updates channel
@@ -250,8 +250,8 @@ async def join_request_handler(client: Client, m: ChatJoinRequest):
                     f"👇 Please click the button below to join, then tap **Verify & Approve** to unlock access instantly!"
                 )
                 keyboard = InlineKeyboardMarkup([
-                    [InlineKeyboardButton("📢 Join Updates Channel", url=invite_link)],
-                    [InlineKeyboardButton("🔄 Verify & Approve", callback_data=f"join_app:{chat.id}")]
+                    [InlineKeyboardButton("🔴 Join Updates Channel 📢", url=invite_link)],
+                    [InlineKeyboardButton("🟢 Verify & Approve ⚡", callback_data=f"join_app:{chat.id}")]
                 ])
                 
             await client.send_message(
