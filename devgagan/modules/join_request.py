@@ -34,8 +34,9 @@ async def send_rich_approval_message(client: Client, user_id: int, chat, invite_
     approve_text = (
         f"<b>🔓 Access Granted! Welcome to {chat.title}! 🎉</b>\n\n"
         f"<blockquote><b>Cheers, <a href='https://t.me/{bot_info.username}'>{full_name}</a>! 🥂</b></blockquote>\n\n"
-        f"Your request to join the channel <b><a href='{invite_link}'>{chat.title}</a></b> has been <b>approved</b> successfully! ✅\n"
-        f"We're thrilled to have you with us. Enjoy your time here! 🥰\n\n"
+        f"Your request to join the channel <b><a href='{invite_link}'>{chat.title}</a></b> has been <b>approved</b> successfully! ✅\n\n"
+        f"⚠️ <b><u>CRITICAL WARNING</u></b> ⚠️\n"
+        f"<i>Do NOT leave our main Updates Channel! If you leave, our system will automatically revoke your access and remove you from <b>ALL</b> channels and groups linked to this bot. Keep your membership active to maintain lifetime access!</i> 💀\n\n"
         f"<i>⚡ Need to save restricted content, download videos, or bypass copy restrictions? Tap 'Start Bot' below to begin!</i> 👇"
     )
     
