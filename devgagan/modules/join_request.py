@@ -195,6 +195,9 @@ async def join_request_handler(client: Client, m: ChatJoinRequest):
         chat = await client.get_chat(m.chat.id)
         auth_channel_id = await get_auth_channel()
         
+        is_member = False
+        invite_link = None
+        
         if auth_channel_id:
             try:
                 member = await client.get_chat_member(chat_id=auth_channel_id, user_id=m.from_user.id)
@@ -216,36 +219,45 @@ async def join_request_handler(client: Client, m: ChatJoinRequest):
                             invite_link = (await client.create_chat_invite_link(auth_channel_id)).invite_link
                         except Exception:
                             invite_link = "https://t.me"
-                            
-                    welcome_text = (
-                        f"✨ **Hello {m.from_user.first_name}!** ✨\n\n"
-                        f"Your request to join **{chat.title}** is currently **pending**... ⏳\n\n"
-                        f"📢 **Verification Required:**\n"
-                        f"To gain access, you must first join our updates channel! This helps us keep you informed about important updates. 😉\n\n"
-                        f"👇 Please click the button below to join, then tap **Verify & Approve** to unlock access instantly!"
-                    )
-                    
-                    keyboard = InlineKeyboardMarkup([
-                        [InlineKeyboardButton("📢 Join Updates Channel", url=invite_link)],
-                        [InlineKeyboardButton("🔄 Verify & Approve", callback_data=f"join_app:{chat.id}")]
-                    ])
-                    
-                    await client.send_message(
-                        chat_id=m.from_user.id,
-                        text=welcome_text,
-                        reply_markup=keyboard
-                    )
-                except Exception as pm_error:
-                    logger.warning(f"Verification message could not be sent to {m.from_user.id}: {pm_error}")
-                return
+                except Exception:
+                    invite_link = "https://t.me"
+        else:
+            # If no auth channel is set, treat them as a member to show direct "Approve Me" button
+            is_member = True
 
-        # Approve and welcome for standard join request
-        await client.approve_chat_join_request(chat.id, m.from_user.id)
-        
-        invite_link = chat.invite_link or (f"https://t.me/{chat.username}" if chat.username else "https://t.me")
-        full_name = f"{m.from_user.first_name or ''} {m.from_user.last_name or ''}".strip()
-        
-        await send_rich_approval_message(client, m.from_user.id, chat, invite_link, full_name)
-
+        # ALWAYS send a message first in DM
+        try:
+            if is_member:
+                # User has joined auth channel (or no auth channel set)
+                welcome_text = (
+                    f"✨ **Hello {m.from_user.first_name}!** ✨\n\n"
+                    f"Your request to join **{chat.title}** is currently **pending**... ⏳\n\n"
+                    f"👇 Please click the button below to verify and approve your request instantly!"
+                )
+                keyboard = InlineKeyboardMarkup([
+                    [InlineKeyboardButton("⚡ Approve Me!", callback_data=f"join_app:{chat.id}")]
+                ])
+            else:
+                # User has NOT joined the updates channel
+                welcome_text = (
+                    f"✨ **Hello {m.from_user.first_name}!** ✨\n\n"
+                    f"Your request to join **{chat.title}** is currently **pending**... ⏳\n\n"
+                    f"📢 **Verification Required:**\n"
+                    f"To gain access, you must first join our updates channel! This helps us keep you informed about important updates. 😉\n\n"
+                    f"👇 Please click the button below to join, then tap **Verify & Approve** to unlock access instantly!"
+                )
+                keyboard = InlineKeyboardMarkup([
+                    [InlineKeyboardButton("📢 Join Updates Channel", url=invite_link)],
+                    [InlineKeyboardButton("🔄 Verify & Approve", callback_data=f"join_app:{chat.id}")]
+                ])
+                
+            await client.send_message(
+                chat_id=m.from_user.id,
+                text=welcome_text,
+                reply_markup=keyboard
+            )
+        except Exception as pm_error:
+            logger.warning(f"Verification message could not be sent to {m.from_user.id}: {pm_error}")
+            
     except Exception as e:
         logger.error(f"Join request handler error: {e}")
