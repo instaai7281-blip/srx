@@ -12,7 +12,7 @@
 import random
 import logging
 import asyncio
-from pyrogram import Client, filters
+from pyrogram import Client, filters, ContinuePropagation
 from pyrogram.enums import ChatMemberStatus, ParseMode
 from pyrogram.types import ChatJoinRequest, InlineKeyboardButton, InlineKeyboardMarkup, Message, CallbackQuery
 from pyrogram.errors import PeerIdInvalid, UserNotMutualContact
@@ -228,10 +228,14 @@ async def handle_auth_callbacks(client: Client, callback_query: CallbackQuery):
         await callback_query.answer()
 
 
-@app.on_message(filters.private & filters.user(OWNER_ID) & ~filters.command(["start", "setauth", "setlog"]))
+@app.on_message(filters.private & filters.user(OWNER_ID))
 async def handle_owner_input(client: Client, message: Message):
     user_id = message.from_user.id
     if ADD_AUTH_STATE.get(user_id) == "awaiting_channel":
+        if message.text and message.text.startswith('/'):
+            ADD_AUTH_STATE.pop(user_id, None)
+            raise ContinuePropagation
+            
         target = message.text.strip()
         ADD_AUTH_STATE.pop(user_id, None)
         
@@ -252,6 +256,8 @@ async def handle_owner_input(client: Client, message: Message):
             )
         except Exception as e:
             await message.reply(f"❌ **Failed to add channel:** {str(e)}\n\nMake sure the bot is added as an administrator in the channel!")
+    else:
+        raise ContinuePropagation
 
 
 @app.on_message(filters.command("setlog") & filters.user(OWNER_ID) & filters.private)

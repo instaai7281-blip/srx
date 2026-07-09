@@ -32,16 +32,35 @@ async def id_command(client, message: Message):
     reply = message.reply_to_message
 
     user = reply.from_user if reply else message.from_user
-    user_id = user.id if user else "N/A"
+    
+    if user:
+        user_id = user.id
+        first_name = user.first_name or ""
+        last_name = user.last_name or ""
+        full_name = f"{first_name} {last_name}".strip() or "N/A"
+        username = f"@{user.username}" if user.username else "N/A"
+    else:
+        user_id = "N/A"
+        full_name = "N/A"
+        username = "N/A"
+        
     chat_id = message.chat.id
+    chat_title = message.chat.title or message.chat.first_name or "Private Chat"
+    chat_type = str(message.chat.type).split('.')[-1].replace('_', ' ').title()
     msg_id = message.id
     reply_id = reply.message_id if reply else "N/A"
 
     text = (
-        f"👤 User ID: `{user_id}`\n"
-        f"💬 Chat ID: `{chat_id}`\n"
-        f"📎 Message ID: `{msg_id}`\n"
-        f"🔁 Reply to Msg ID: `{reply_id}`"
+        f"👤 **User Details:**\n"
+        f"• **Name:** {full_name}\n"
+        f"• **Username:** {username}\n"
+        f"• **User ID:** `{user_id}`\n\n"
+        f"💬 **Chat Details:**\n"
+        f"• **Title:** {chat_title}\n"
+        f"• **Type:** {chat_type}\n"
+        f"• **Chat ID:** `{chat_id}`\n\n"
+        f"📎 **Message ID:** `{msg_id}`\n"
+        f"🔁 **Reply to Msg ID:** `{reply_id}`"
     )
 
     await message.reply_text(text, quote=True)
