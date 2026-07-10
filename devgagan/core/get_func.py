@@ -583,27 +583,7 @@ async def upload_media(sender, target_chat_id, file, caption, edit, topic_id, th
             )
 
     except Exception as e:
-        import traceback
-        tb_str = traceback.format_exc()
-        
-        safe_file = repr(file) if 'file' in locals() else 'Not defined'
-        safe_caption = repr(caption) if 'caption' in locals() else 'Not defined'
-        safe_file_name = repr(file_name) if 'file_name' in locals() else 'Not defined'
-        safe_log_caption = repr(log_caption) if 'log_caption' in locals() else 'Not defined'
-
-        debug_msg = (
-            f"❌ **Upload Failed:** `{str(e)}`\n\n"
-            f"**Debug info:**\n"
-            f"• File: `{safe_file}`\n"
-            f"• Caption: `{safe_caption}`\n"
-            f"• File Name: `{safe_file_name}`\n"
-            f"• Log Caption: `{safe_log_caption}`\n\n"
-            f"**Traceback:**\n`{tb_str}`"
-        )
-        # Limit length of debug message to prevent Telegram message length limit issues (4096 chars)
-        if len(debug_msg) > 4000:
-            debug_msg = debug_msg[:3900] + "\n...[TRUNCATED]..."
-        await app.send_message(LOG_GROUP, debug_msg)
+        await app.send_message(LOG_GROUP, f"❌ **Upload Failed:** `{str(e)}`")
         print(f"Error during media upload: {e}")
 
     finally:
@@ -884,7 +864,7 @@ async def get_msg(userbot: TelegramClient, sender: int, edit_id: int, msg_link: 
         caption = await get_final_caption(msg, sender)
 
         # Rename file
-        file = await rename_file(file, sender, caption=caption)
+        file = await rename_file(file, sender)
 
         if file and str(file).lower().endswith('.pdf') and not caption:
             filename = os.path.basename(file)
@@ -2159,8 +2139,6 @@ async def handle_large_file(file, sender, edit, caption):
     
     target_chat_id = get_target_chat_id(sender)
     file_extension = str(file).split('.')[-1].lower()
-    file = clean_surrogates(str(file))
-    caption = clean_surrogates(caption)
     metadata = video_metadata(file)
     duration = metadata['duration']
     width = metadata['width']
@@ -2336,7 +2314,6 @@ async def rename_file(file, sender, caption=None):
     base_name = strip_unicode_junk(base_name)
 
     # Final filename assembly
-    custom_rename_tag = clean_surrogates(custom_rename_tag)
     new_filename = f"{base_name.strip()} {custom_rename_tag}{ext}".strip()
     new_filename = clean_surrogates(new_filename)
     
@@ -2514,8 +2491,7 @@ async def split_and_upload_file(app, sender, target_chat_id, file_path, caption,
 
             # Uploading part
             edit = await app.send_message(target_chat_id, f"⬆️ Uploading part {part_number + 1}...")
-            part_caption = clean_surrogates(f"{caption} \n\n**Part : {part_number + 1}**")
-            part_file = clean_surrogates(part_file)
+            part_caption = f"{caption} \n\n**Part : {part_number + 1}**"
             await app.send_document(target_chat_id, document=part_file, caption=part_caption, reply_to_message_id=topic_id,
                 thumb=thumb,
                 progress=progress_bar,
