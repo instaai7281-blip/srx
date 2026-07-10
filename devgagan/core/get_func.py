@@ -1010,11 +1010,11 @@ async def handle_sticker(app, msg, target_chat_id, topic_id, edit_id, log_group)
 
 async def get_media_filename(msg):
     if msg.document:
-        return msg.document.file_name or "document.txt"
+        return clean_surrogates(msg.document.file_name or "document.txt")
     if msg.video:
-        return msg.video.file_name or "video.mp4"
+        return clean_surrogates(msg.video.file_name or "video.mp4")
     if msg.audio:
-        return msg.audio.file_name or "audio.mp3"
+        return clean_surrogates(msg.audio.file_name or "audio.mp3")
     if msg.photo:
         return "image.jpg"
     return "file.dat"
@@ -2206,7 +2206,10 @@ def strip_unicode_junk(text: str) -> str:
     clean = []
     for char in text:
         codepoint = ord(char)
-        name = unicodedata.name(char, "")
+        try:
+            name = unicodedata.name(char, "")
+        except ValueError:
+            name = ""
 
         # ✅ Preserve Gujarati & Indian scripts including matras
         if (
@@ -2297,6 +2300,7 @@ async def rename_file(file, sender, caption=None):
 
     # Final filename assembly
     new_filename = f"{base_name.strip()} {custom_rename_tag}{ext}".strip()
+    new_filename = clean_surrogates(new_filename)
     
     # Ensure filename isn't empty after processing
     if not os.path.splitext(new_filename)[0]:
