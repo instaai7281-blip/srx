@@ -864,7 +864,7 @@ async def get_msg(userbot: TelegramClient, sender: int, edit_id: int, msg_link: 
         caption = await get_final_caption(msg, sender)
 
         # Rename file
-        file = await rename_file(file, sender)
+        file = await rename_file(file, sender, caption=caption)
 
         if file and str(file).lower().endswith('.pdf') and not caption:
             filename = os.path.basename(file)
@@ -2139,6 +2139,8 @@ async def handle_large_file(file, sender, edit, caption):
     
     target_chat_id = get_target_chat_id(sender)
     file_extension = str(file).split('.')[-1].lower()
+    file = clean_surrogates(str(file))
+    caption = clean_surrogates(caption)
     metadata = video_metadata(file)
     duration = metadata['duration']
     width = metadata['width']
@@ -2314,6 +2316,7 @@ async def rename_file(file, sender, caption=None):
     base_name = strip_unicode_junk(base_name)
 
     # Final filename assembly
+    custom_rename_tag = clean_surrogates(custom_rename_tag)
     new_filename = f"{base_name.strip()} {custom_rename_tag}{ext}".strip()
     new_filename = clean_surrogates(new_filename)
     
@@ -2491,7 +2494,8 @@ async def split_and_upload_file(app, sender, target_chat_id, file_path, caption,
 
             # Uploading part
             edit = await app.send_message(target_chat_id, f"⬆️ Uploading part {part_number + 1}...")
-            part_caption = f"{caption} \n\n**Part : {part_number + 1}**"
+            part_caption = clean_surrogates(f"{caption} \n\n**Part : {part_number + 1}**")
+            part_file = clean_surrogates(part_file)
             await app.send_document(target_chat_id, document=part_file, caption=part_caption, reply_to_message_id=topic_id,
                 thumb=thumb,
                 progress=progress_bar,
