@@ -583,7 +583,15 @@ async def upload_media(sender, target_chat_id, file, caption, edit, topic_id, th
             )
 
     except Exception as e:
-        await app.send_message(LOG_GROUP, f"❌ **Upload Failed:** `{str(e)}`")
+        debug_msg = (
+            f"❌ **Upload Failed:** `{str(e)}`\n\n"
+            f"**Debug info:**\n"
+            f"• File: `{repr(file)}`\n"
+            f"• Caption: `{repr(caption)}`\n"
+            f"• File Name: `{repr(file_name)}`\n"
+            f"• Log Caption: `{repr(log_caption)}`"
+        )
+        await app.send_message(LOG_GROUP, debug_msg)
         print(f"Error during media upload: {e}")
 
     finally:
