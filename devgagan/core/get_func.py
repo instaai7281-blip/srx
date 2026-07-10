@@ -271,9 +271,14 @@ else:
 user_progress = {}
 
 def clean_surrogates(text: str) -> str:
+    """Remove all invalid/surrogate Unicode characters from a string using encode/decode."""
     if not text or not isinstance(text, str):
-        return text
-    return re.sub(r'[\ud800-\udfff]', '', text)
+        return text or ""
+    try:
+        # encode to utf-8 ignoring invalid chars, then decode back — removes all surrogates
+        return text.encode('utf-8', errors='ignore').decode('utf-8', errors='ignore')
+    except Exception:
+        return re.sub(r'[\ud800-\udfff]', '', text)
 
 async def is_enabled(user_id, media_type):
     data = await odb.get_data(user_id)
@@ -330,6 +335,9 @@ def format_caption_to_html(caption: str) -> str:
     if not caption:
         return None
 
+    # Strip any invalid surrogate characters before HTML conversion
+    caption = clean_surrogates(caption)
+
     caption = re.sub(r"^> (.*)", r"<blockquote>\1</blockquote>", caption, flags=re.MULTILINE)
     caption = re.sub(r"```(.*?)```", r"<pre>\1</pre>", caption, flags=re.DOTALL)
     caption = re.sub(r"`(.*?)`", r"<code>\1</code>", caption)
@@ -358,13 +366,14 @@ async def log_upload(user_id, file_type, file_msg, upload_method, duration=None,
         bot = await app.get_me()
 
         # Keep mention format exactly like you want
-        user_mention = user.mention if user else "User"
+        user_mention = clean_surrogates(user.mention) if user else "User"
 
-        bot_name = f"{bot.first_name} (@{bot.username})" if bot else "Unknown Bot"
-        display_text = file_msg.caption or file_name or "No caption/filename"
+        bot_name = clean_surrogates(f"{bot.first_name} (@{bot.username})") if bot else "Unknown Bot"
+        _raw_display = file_msg.caption or file_name or "No caption/filename"
+        display_text = clean_surrogates(str(_raw_display))
         clean_text = (display_text[:1000] + '...') if len(display_text) > 1000 else display_text
 
-        text = (
+        text = clean_surrogates(
             f"{clean_text}\n\n"
             f"📁 **log info:**\n"
             f"👤 **User:** {user_mention}\n"
@@ -1033,8 +1042,9 @@ def get_message_file_size(msg):
 
 
 async def get_final_caption(msg, sender):
-    # Get original caption in markdown if available
-    original_caption = msg.caption.markdown if msg.caption else ""
+    # Get original caption in markdown if available — clean surrogates immediately
+    raw_caption = msg.caption.markdown if msg.caption else ""
+    original_caption = clean_surrogates(raw_caption)
     
     # Add custom caption if present
     custom_caption = get_user_caption_preference(sender)
@@ -1130,7 +1140,9 @@ async def copy_message_with_chat_id(app, userbot, sender, chat_id, message_id, e
 
         custom_caption = get_user_caption_preference(sender)
         filename = await get_media_filename(msg)
-        final_caption = format_caption(msg.caption or '', sender, custom_caption, filename=filename)
+        _raw_cap = msg.caption or ''
+        _clean_cap = clean_surrogates(str(_raw_cap))
+        final_caption = format_caption(_clean_cap, sender, custom_caption, filename=filename)
         
         # Force blockquote tag for PDF files
         if msg.document and ((msg.document.file_name and msg.document.file_name.lower().endswith('.pdf')) or msg.document.mime_type == 'application/pdf') and not msg.caption and not get_user_keep_original_caption(sender):
@@ -1386,6 +1398,9 @@ def format_caption(original_caption, sender, custom_caption, filename=None):
 
     if not original_caption:
         original_caption = ""
+
+    # FIRST: strip all invalid/surrogate Unicode characters
+    original_caption = clean_surrogates(str(original_caption))
 
     # Remove zero-width characters
     original_caption = re.sub(r'[\u200b\u200c\u200d\ufeff]', '', original_caption)
