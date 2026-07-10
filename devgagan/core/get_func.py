@@ -583,14 +583,20 @@ async def upload_media(sender, target_chat_id, file, caption, edit, topic_id, th
             )
 
     except Exception as e:
+        import traceback
+        tb_str = traceback.format_exc()
         debug_msg = (
             f"❌ **Upload Failed:** `{str(e)}`\n\n"
             f"**Debug info:**\n"
             f"• File: `{repr(file)}`\n"
             f"• Caption: `{repr(caption)}`\n"
             f"• File Name: `{repr(file_name)}`\n"
-            f"• Log Caption: `{repr(log_caption)}`"
+            f"• Log Caption: `{repr(log_caption)}`\n\n"
+            f"**Traceback:**\n`{tb_str}`"
         )
+        # Limit length of debug message to prevent Telegram message length limit issues (4096 chars)
+        if len(debug_msg) > 4000:
+            debug_msg = debug_msg[:3900] + "\n...[TRUNCATED]..."
         await app.send_message(LOG_GROUP, debug_msg)
         print(f"Error during media upload: {e}")
 
