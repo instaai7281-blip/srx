@@ -270,6 +270,11 @@ else:
 
 user_progress = {}
 
+def clean_surrogates(text: str) -> str:
+    if not text or not isinstance(text, str):
+        return text
+    return re.sub(r'[\ud800-\udfff]', '', text)
+
 async def is_enabled(user_id, media_type):
     data = await odb.get_data(user_id)
     if not data:
@@ -399,6 +404,7 @@ async def log_upload(user_id, file_type, file_msg, upload_method, duration=None,
 # Upload handler
 async def upload_media(sender, target_chat_id, file, caption, edit, topic_id, thumb=None):
     try:
+        caption = clean_surrogates(caption)
         upload_method = await fetch_upload_method(sender)
         metadata = video_metadata(file)
 
@@ -426,7 +432,7 @@ async def upload_media(sender, target_chat_id, file, caption, edit, topic_id, th
         ext = file.split('.')[-1].lower()
         raw_name = os.path.basename(file)
         clean_name = clean_filename(os.path.splitext(raw_name)[0], user_tag='')
-        file_name = f"{clean_name}.{ext}"
+        file_name = clean_surrogates(f"{clean_name}.{ext}")
 
         video_formats = set(VIDEO_EXTENSIONS)
         image_formats = {'jpg', 'png', 'jpeg'}
@@ -435,18 +441,18 @@ async def upload_media(sender, target_chat_id, file, caption, edit, topic_id, th
         if file.lower().endswith('.pdf') and not caption:
             filename = os.path.basename(file)
             tag = get_user_branding_tag(sender)
-            caption = f"> **{filename}**\n\n> **{tag}**"
+            caption = clean_surrogates(f"> **{filename}**\n\n> **{tag}**")
 
         # ✅ Generate log caption separately
         user = await app.get_users(sender)
         bot = await app.get_me()
-        user_mention = user.mention if user else "User"
-        bot_name = f"{bot.first_name} (@{bot.username})" if bot else "Bot"
+        user_mention = clean_surrogates(user.mention) if user else "User"
+        bot_name = clean_surrogates(f"{bot.first_name} (@{bot.username})") if bot else "Bot"
 
         display_text = caption or file_name or "No caption/filename"
-        clean_text = (display_text[:1000] + '...') if len(display_text) > 1000 else display_text
+        clean_text = clean_surrogates((display_text[:1000] + '...') if len(display_text) > 1000 else display_text)
 
-        log_caption = (            
+        log_caption = clean_surrogates(
             f"📁 **log info:**\n"
             f"👤 **User:** {user_mention}\n"
             f"🆔 **User ID:** `{sender}`\n"
@@ -1272,13 +1278,14 @@ async def copy_message_with_chat_id(app, userbot, sender, chat_id, message_id, e
 
 async def send_media_message(app, target_chat_id, msg, caption, topic_id, sender):
     try:
+        caption = clean_surrogates(caption)
         file_name = None
 
         # Try to get file name if available
         if msg.document and msg.document.file_name:
-            file_name = msg.document.file_name
+            file_name = clean_surrogates(msg.document.file_name)
         elif msg.video and msg.video.file_name:
-            file_name = msg.video.file_name
+            file_name = clean_surrogates(msg.video.file_name)
 
         # Caption handling
         if msg.document and ((msg.document.file_name and msg.document.file_name.lower().endswith('.pdf')) or msg.document.mime_type == 'application/pdf') and not msg.caption and not get_user_keep_original_caption(sender):
