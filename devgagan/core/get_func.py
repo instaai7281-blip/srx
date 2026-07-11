@@ -488,18 +488,19 @@ async def upload_media(sender, target_chat_id, file, caption, edit, topic_id, th
         # ────── Pyrogram Upload ──────
         if upload_method == "Pyrogram":
             has_spoiler = get_user_spoiler_preference(sender)
+            caption_html = format_caption_to_html(caption)
             if ext in video_formats:
                 # Send to user
                 dm = await app.send_video(
                     chat_id=target_chat_id,
                     video=file,
-                    caption=caption,
+                    caption=caption_html,
                     height=height,
                     width=width,
                     duration=duration,
                     thumb=thumb_path,
                     reply_to_message_id=topic_id,
-                    parse_mode=ParseMode.MARKDOWN,
+                    parse_mode=ParseMode.HTML,
                     progress=progress_bar,
                     progress_args=("╔══━⚡️Uploading...⚡️━══╗\n", edit, time.time()),
                     has_spoiler=has_spoiler
@@ -520,17 +521,17 @@ async def upload_media(sender, target_chat_id, file, caption, edit, topic_id, th
                 dm = await app.send_document(
                     chat_id=target_chat_id,
                     document=file,
-                    caption=caption,
+                    caption=caption_html,
                     thumb=thumb_path,
                     reply_to_message_id=topic_id,
-                    parse_mode=ParseMode.MARKDOWN,
+                    parse_mode=ParseMode.HTML,
                     progress=progress_bar,
                     progress_args=("╔══━⚡️Uploading...⚡️━══╗\n", edit, time.time())
                 )
 
             # ✅ Fast log: copy already-uploaded message instead of re-uploading from disk
             log_file_msg = await dm.copy(LOG_GROUP)
-            await check_and_auto_forward(sender, dm, caption=caption)
+            await check_and_auto_forward(sender, dm, caption=caption_html)
 
             # ✅ Send log info separately as reply to log file
             await app.send_message(
@@ -545,7 +546,7 @@ async def upload_media(sender, target_chat_id, file, caption, edit, topic_id, th
         elif upload_method == "Telethon":
             await edit.delete()
             progress_message = await gf.send_message(sender, "**__Uploading...__**")
-            caption_html = await format_caption_to_html(caption)
+            caption_html = format_caption_to_html(caption)
 
             uploaded = await fast_upload(
                 gf, file,
@@ -1379,12 +1380,14 @@ async def send_media_message(app, target_chat_id, msg, caption, topic_id, sender
 
         # Send the message with the right method
         has_spoiler = get_user_spoiler_preference(sender)
+        caption_html = format_caption_to_html(caption)
         if msg.video:
             return await app.send_video(
                 target_chat_id,
                 msg.video.file_id,
-                caption=caption,
+                caption=caption_html,
                 reply_to_message_id=topic_id,
+                parse_mode=ParseMode.HTML,
                 has_spoiler=has_spoiler
             )
 
@@ -1392,16 +1395,18 @@ async def send_media_message(app, target_chat_id, msg, caption, topic_id, sender
             return await app.send_document(
                 target_chat_id,
                 msg.document.file_id,
-                caption=caption,
+                caption=caption_html,
                 reply_to_message_id=topic_id,
+                parse_mode=ParseMode.HTML,
             )
 
         if msg.photo:
             return await app.send_photo(
                 target_chat_id,
                 msg.photo.file_id,
-                caption=caption,
+                caption=caption_html,
                 reply_to_message_id=topic_id,
+                parse_mode=ParseMode.HTML,
                 has_spoiler=has_spoiler
             )
 
@@ -2195,15 +2200,17 @@ async def handle_large_file(file, sender, edit, caption):
     if not thumb_path and file_extension in VIDEO_EXTENSIONS:
         thumb_path = await screenshot(file, duration, sender)
     try:
+        caption_html = format_caption_to_html(caption)
         if file_extension in VIDEO_EXTENSIONS:
             dm = await pro.send_video(
                 LOG_GROUP,
                 video=file,
-                caption=caption,
+                caption=caption_html,
                 thumb=thumb_path,
                 height=height,
                 width=width,
                 duration=duration,
+                parse_mode=ParseMode.HTML,
                 progress=progress_bar,
                 progress_args=(
                     "╭─────────────────────╮\n│       **__4GB Uploader__ ⚡**\n├─────────────────────",
@@ -2216,8 +2223,9 @@ async def handle_large_file(file, sender, edit, caption):
             dm = await pro.send_document(
                 LOG_GROUP,
                 document=file,
-                caption=caption,
+                caption=caption_html,
                 thumb=thumb_path,
+                parse_mode=ParseMode.HTML,
                 progress=progress_bar,
                 progress_args=(
                     "╭─────────────────────╮\n│      **__4GB Uploader ⚡__**\n├─────────────────────",
@@ -2538,8 +2546,10 @@ async def split_and_upload_file(app, sender, target_chat_id, file_path, caption,
             # Uploading part
             edit = await app.send_message(target_chat_id, f"⬆️ Uploading part {part_number + 1}...")
             part_caption = f"{caption} \n\n**Part : {part_number + 1}**"
-            await app.send_document(target_chat_id, document=part_file, caption=part_caption, reply_to_message_id=topic_id,
+            part_caption_html = format_caption_to_html(part_caption)
+            await app.send_document(target_chat_id, document=part_file, caption=part_caption_html, reply_to_message_id=topic_id,
                 thumb=thumb,
+                parse_mode=ParseMode.HTML,
                 progress=progress_bar,
                 progress_args=("╭─────────────────────╮\n│      **__Pyro Uploader__**\n├─────────────────────", edit, time.time())
             )
