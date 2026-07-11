@@ -271,14 +271,25 @@ else:
 user_progress = {}
 
 def clean_surrogates(text: str) -> str:
-    """Remove all invalid/surrogate Unicode characters from a string using encode/decode."""
+    """Remove all invalid/surrogate Unicode characters from a string using a foolproof generator expression."""
     if not text or not isinstance(text, str):
         return text or ""
+    return "".join(c for c in text if not (0xD800 <= ord(c) <= 0xDFFF))
+
+async def resolve_peer_safely(client, chat_id):
+    if not chat_id:
+        return chat_id
     try:
-        # encode to utf-8 ignoring invalid chars, then decode back — removes all surrogates
-        return text.encode('utf-8', errors='ignore').decode('utf-8', errors='ignore')
-    except Exception:
-        return re.sub(r'[\ud800-\udfff]', '', text)
+        if isinstance(chat_id, str):
+            if chat_id.startswith("-100") or (chat_id.startswith("-") and chat_id[1:].isdigit()) or chat_id.isdigit():
+                chat_id = int(chat_id)
+        if hasattr(client, "get_chat"):
+            await client.get_chat(chat_id)
+        elif hasattr(client, "get_entity"):
+            await client.get_entity(chat_id)
+    except Exception as e:
+        print(f"Failed to resolve peer {chat_id} on client {client.__class__.__name__}: {e}")
+    return chat_id
 
 async def is_enabled(user_id, media_type):
     data = await odb.get_data(user_id)
@@ -413,6 +424,12 @@ async def log_upload(user_id, file_type, file_msg, upload_method, duration=None,
 # Upload handler
 async def upload_media(sender, target_chat_id, file, caption, edit, topic_id, thumb=None):
     try:
+        target_chat_id = await resolve_peer_safely(app, target_chat_id)
+        await resolve_peer_safely(app, LOG_GROUP)
+        if pro:
+            await resolve_peer_safely(pro, target_chat_id)
+            await resolve_peer_safely(pro, LOG_GROUP)
+            
         caption = clean_surrogates(caption)
         upload_method = await fetch_upload_method(sender)
         metadata = video_metadata(file)
@@ -583,8 +600,28 @@ async def upload_media(sender, target_chat_id, file, caption, edit, topic_id, th
             )
 
     except Exception as e:
-        await app.send_message(LOG_GROUP, f"❌ **Upload Failed:** `{str(e)}`")
-        print(f"Error during media upload: {e}")
+        import traceback
+        tb_str = traceback.format_exc()
+        
+        safe_file = repr(file) if 'file' in locals() else 'Not defined'
+        safe_caption = repr(caption) if 'caption' in locals() else 'Not defined'
+        safe_file_name = repr(file_name) if 'file_name' in locals() else 'Not defined'
+        safe_log_caption = repr(log_caption) if 'log_caption' in locals() else 'Not defined'
+
+        debug_msg = (
+            f"❌ **Upload Failed:** `{str(e)}`\n\n"
+            f"**Debug info:**\n"
+            f"• File: `{safe_file}`\n"
+            f"• Caption: `{safe_caption}`\n"
+            f"• File Name: `{safe_file_name}`\n"
+            f"• Log Caption: `{safe_log_caption}`\n\n"
+            f"**Traceback:**\n`{tb_str}`"
+        )
+        # Limit length of debug message to prevent Telegram message length limit issues (4096 chars)
+        if len(debug_msg) > 4000:
+            debug_msg = debug_msg[:3900] + "\n...[TRUNCATED]..."
+        await app.send_message(LOG_GROUP, debug_msg)
+        print(f"Error during media upload: {e}\n{tb_str}")
 
     finally:
     # Only delete if it was not from saved thumbnail
@@ -804,6 +841,15 @@ async def get_msg(userbot: TelegramClient, sender: int, edit_id: int, msg_link: 
         topic_id = None
         if '/' in str(target_chat_id):
             target_chat_id, topic_id = map(int, target_chat_id.split('/', 1))
+            
+        target_chat_id = await resolve_peer_safely(app, target_chat_id)
+        await resolve_peer_safely(app, LOG_GROUP)
+        if userbot:
+            await resolve_peer_safely(userbot, target_chat_id)
+            await resolve_peer_safely(userbot, LOG_GROUP)
+        if pro:
+            await resolve_peer_safely(pro, target_chat_id)
+            await resolve_peer_safely(pro, LOG_GROUP)
 
         # Handle different message types
         if msg.media == MessageMediaType.WEB_PAGE_PREVIEW:
