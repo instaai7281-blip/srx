@@ -1190,198 +1190,132 @@ async def download_user_stories(userbot, chat_id, msg_id, edit, sender):
         
 async def copy_message_with_chat_id(app, userbot, sender, chat_id, message_id, edit):
     target_chat_id = get_target_chat_id(sender)
-    file = None
     result = None
-    size_limit = 2 * 1024 * 1024 * 1024  # 2 GB size limit
 
     try:
-        # Try with app or fallback client
-        client_to_use = app
-        try:
-            msg = await client_to_use.get_messages(chat_id, message_id)
-            if not msg or msg.empty:
-                raise Exception("Message not found")
-        except Exception:
-            client_to_use = get_client()
-            if client_to_use:
-                msg = await client_to_use.get_messages(chat_id, message_id)
-            else:
-                return False
-
-        if not msg or msg.empty:
-            return False
-
-        # Apply filter checks in copy_message_with_chat_id!
-        if msg.media == MessageMediaType.WEB_PAGE_PREVIEW or msg.text:
-            if not await is_enabled(sender, "text"):
-                return True
-        elif msg.media:
-            if msg.video and not await is_enabled(sender, "video"):
-                return True
-            if msg.document and not await is_enabled(sender, "document"):
-                return True
-            if msg.photo and not await is_enabled(sender, "photo"):
-                return True
-            if msg.audio and not await is_enabled(sender, "audio"):
-                return True
-            if msg.voice and not await is_enabled(sender, "voice"):
-                return True
-            if msg.sticker and not await is_enabled(sender, "sticker"):
-                return True
-
-        # If protected content, force extraction (return False here)
-        if msg.has_protected_content:
-            return False
-
-        custom_caption = get_user_caption_preference(sender)
-        filename = await get_media_filename(msg)
-        _raw_cap = msg.caption or ''
-        _clean_cap = clean_surrogates(str(_raw_cap))
-        final_caption = format_caption(_clean_cap, sender, custom_caption, filename=filename)
-        
-        # Force blockquote tag for PDF files
-        if msg.document and ((msg.document.file_name and msg.document.file_name.lower().endswith('.pdf')) or msg.document.mime_type == 'application/pdf') and not msg.caption and not get_user_keep_original_caption(sender):
-            orig_filename = msg.document.file_name or "document.pdf"
-            # Aggressively clean up original filename to remove others' tags
-            clean_filename_base = remove_chaudhary_fancy(orig_filename)
-            clean_filename_base = re.sub(r'@\w+', '', clean_filename_base)
-            clean_filename_base = re.sub(r'(?i)[*_]*team[\s_\-\.]*jnc[*_]*', '', clean_filename_base)
-            clean_filename_base = re.sub(r'(?i)[*_]*team[\s_\-\.]*spay[*_]*', '', clean_filename_base)
-            clean_filename_base = re.sub(r'(?i)[*_]*let\'?s\s*help[*_]*', '', clean_filename_base)
-            clean_filename_base = re.sub(r'✧\s*𝚃𝙷𝙴\s*𝚂𝚃𝚄𝙳𝚈\s*𝚅𝙰𝚄𝙻𝚃\s*✧\s*🏝️?', '', clean_filename_base)
-            clean_filename_base = re.sub(r'[ \-_]+', ' ', clean_filename_base).strip()
-            
-            base_name, ext = os.path.splitext(clean_filename_base)
-            if ext.lower() != '.pdf':
-                ext = '.pdf'
-            tag = get_user_branding_tag(sender)
-            formatted_filename = f"{base_name.strip()} ⚝{ext}".strip()
-            final_caption = f"> **{formatted_filename}**\n\n> **{tag}**"
-
         topic_id = None
         if '/' in str(target_chat_id):
-            target_chat_id, topic_id = map(int, target_chat_id.split('/', 1))
+            target_chat_id, topic_id = map(int, str(target_chat_id).split('/', 1))
 
-        if msg.media:
-            result = await send_media_message(app, target_chat_id, msg, final_caption, topic_id, sender)
-        elif msg.text:
-            cleaned_text = clean_text_message(msg.text.markdown if hasattr(msg.text, 'markdown') else str(msg.text), sender)
-            if not cleaned_text.strip():
-                branding_tag = get_user_branding_tag(sender)
-                cleaned_text = f"> **{branding_tag}**"
-            result = await app.send_message(target_chat_id, cleaned_text, reply_to_message_id=topic_id)
-        
+        # Try to get message first to check protections and filters
+        client_to_use = app
+        msg = None
+        try:
+            msg = await app.get_messages(chat_id, message_id)
+            if not msg or msg.empty:
+                raise Exception("empty")
+        except Exception:
+            if userbot:
+                try:
+                    if isinstance(chat_id, str) and not chat_id.startswith("-") and not chat_id.isdigit():
+                        try:
+                            ent = await userbot.get_entity(chat_id)
+                            chat_id = ent.id
+                        except Exception:
+                            pass
+                    from telethon.tl.functions.messages import GetMessagesRequest
+                    result_tl = await userbot.get_messages(chat_id, ids=message_id)
+                    if result_tl:
+                        msg = result_tl
+                except Exception:
+                    pass
+
+        if not msg or (hasattr(msg, 'empty') and msg.empty):
+            return False
+
+        # Apply filter checks
+        if hasattr(msg, 'media') and msg.media:
+            media = msg.media
+            if hasattr(media, 'video') and media.video and not await is_enabled(sender, "video"):
+                return True
+            if hasattr(msg, 'document') and msg.document and not await is_enabled(sender, "document"):
+                return True
+            if hasattr(msg, 'photo') and msg.photo and not await is_enabled(sender, "photo"):
+                return True
+            if hasattr(msg, 'audio') and msg.audio and not await is_enabled(sender, "audio"):
+                return True
+            if hasattr(msg, 'sticker') and msg.sticker and not await is_enabled(sender, "sticker"):
+                return True
+        elif hasattr(msg, 'text') and msg.text and not await is_enabled(sender, "text"):
+            return True
+
+        # Protected content — cannot copy
+        if hasattr(msg, 'has_protected_content') and msg.has_protected_content:
+            return False
+
+        # Build our custom caption using the branding tag
+        branding_tag = get_user_branding_tag(sender)
+        custom_caption = get_user_caption_preference(sender)
+        filename = await get_media_filename(msg)
+        _raw_cap = ''
+        if hasattr(msg, 'caption') and msg.caption:
+            _raw_cap = str(msg.caption)
+        elif hasattr(msg, 'message') and msg.message:
+            _raw_cap = str(msg.message)
+
+        _clean_cap = clean_surrogates(_raw_cap)
+
+        if get_user_keep_original_caption(sender) and _clean_cap:
+            final_caption = _clean_cap
+        elif custom_caption:
+            final_caption = apply_custom_caption_placeholders(custom_caption, _clean_cap, filename)
+        else:
+            final_caption = format_caption(_clean_cap, sender, None, filename=filename)
+
+        final_caption_html = format_caption_to_html(clean_surrogates(final_caption)) if final_caption else None
+
+        # ── SERVER-SIDE copy_message (NO download) ──
+        # Pyrogram's copy_message reuses the file_reference from the source message
+        # and creates a new message on Telegram's side — zero bytes transferred locally.
+        result = await app.copy_message(
+            chat_id=target_chat_id,
+            from_chat_id=chat_id,
+            message_id=message_id,
+            caption=final_caption_html,
+            parse_mode=ParseMode.HTML,
+            reply_to_message_id=topic_id,
+        )
         if result:
             return True
 
     except Exception as e:
-        print(f"App copy failed: {e}")
+        print(f"Server-side copy failed: {e}")
 
-    # Fallback to userbot if app copy fails
+    # Fallback: try userbot forward (instant, no download)
     if userbot:
         try:
-            await edit.edit("Trying extraction via userbot... ⚡")
-            
-            # Resolve chat_id if it's a username string
             if isinstance(chat_id, str) and not chat_id.startswith("-") and not chat_id.isdigit():
                 try:
-                    chat_entity = await userbot.get_entity(chat_id)
-                    resolved_chat_id = chat_entity.id
+                    ent = await userbot.get_entity(chat_id)
+                    chat_id_resolved = ent.id
                 except Exception:
-                    resolved_chat_id = chat_id
+                    chat_id_resolved = chat_id
             else:
-                resolved_chat_id = chat_id
+                chat_id_resolved = chat_id
 
-            msg = await userbot.get_messages(resolved_chat_id, message_id)
-            if not msg or msg.empty:
-                return False
+            _topic_id = None
+            _target = get_target_chat_id(sender)
+            if '/' in str(_target):
+                _target, _topic_id = map(int, str(_target).split('/', 1))
+            else:
+                _target = int(_target) if str(_target).lstrip('-').isdigit() else _target
 
-            if msg.text:
-                cleaned_text = clean_text_message(msg.text.markdown if hasattr(msg.text, 'markdown') else str(msg.text), sender)
-                if not cleaned_text.strip():
-                    branding_tag = get_user_branding_tag(sender)
-                    cleaned_text = f"> **{branding_tag}**"
-                await app.send_message(target_chat_id, cleaned_text, reply_to_message_id=topic_id)
-                return True
-
-            custom_caption = get_user_caption_preference(sender)
-            filename = await get_media_filename(msg)
-            final_caption = format_caption(msg.caption.markdown if msg.caption else "", sender, custom_caption, filename=filename)
-            
-            # Try fast copy via userbot send_media first before downloading
-            if not getattr(msg, "has_protected_content", False) and not force_extraction:
-                try:
-                    has_spoiler = get_user_spoiler_preference(sender)
-                    if msg.video:
-                        await userbot.send_video(target_chat_id, msg.video, caption=final_caption, reply_to_message_id=topic_id, has_spoiler=has_spoiler)
-                        return True
-                    elif msg.document:
-                        await userbot.send_document(target_chat_id, msg.document, caption=final_caption, reply_to_message_id=topic_id)
-                        return True
-                    elif msg.photo:
-                        await userbot.send_photo(target_chat_id, msg.photo, caption=final_caption, reply_to_message_id=topic_id, has_spoiler=has_spoiler)
-                        return True
-                    elif msg.audio:
-                        await userbot.send_audio(target_chat_id, msg.audio, caption=final_caption, reply_to_message_id=topic_id)
-                        return True
-                except Exception as ue:
-                    print(f"Userbot instant copy failed: {ue}")
-
-            # unique directory for each user to prevent concurrency collisions
-            temp_dir = os.path.join("downloads", str(sender))
-            os.makedirs(temp_dir, exist_ok=True)
-
-            # Join the chat first to resolve username entity and prevent PeerIdInvalid / ChannelPrivate errors
-            if userbot and isinstance(resolved_chat_id, str) and not resolved_chat_id.startswith("-") and not resolved_chat_id.isdigit():
-                try:
-                    await userbot.join_chat(resolved_chat_id)
-                except Exception:
-                    pass
-
-            target_file_path = os.path.join(temp_dir, filename)
-            file = await userbot.download_media(
-                msg,
-                file_name=target_file_path,
-                progress=progress_bar,
-                progress_args=("╭─────────────────────╮\n│      **__Downloading__...**\n├─────────────────────", edit, time.time())
+            await userbot.forward_messages(
+                _target,
+                message_id,
+                chat_id_resolved,
             )
-            if not file:
-                return False
-
-            file = await rename_file(file, sender)
-
-            if file and str(file).lower().endswith('.pdf') and not msg.caption:
-                filename = os.path.basename(file)
-                tag = get_user_branding_tag(sender)
-                final_caption = f"> **{filename}**\n\n> **{tag}**"
-            file_size = os.path.getsize(file)
-
-            if msg.photo:
-                await app.send_photo(target_chat_id, file, caption=None, reply_to_message_id=topic_id)
-            elif msg.video or msg.document:
-                freecheck = await chk_user(None, sender)
-                if file_size > size_limit and (freecheck == 0 or pro is None):
-                    await split_and_upload_file(app, sender, target_chat_id, file, final_caption, topic_id)
-                elif file_size > size_limit:
-                    await handle_large_file(file, sender, edit, final_caption)
-                else:
-                    await upload_media(sender, target_chat_id, file, final_caption, edit, topic_id)
-            elif msg.audio:
-                await app.send_audio(target_chat_id, file, caption=final_caption, reply_to_message_id=topic_id)
-            elif msg.voice:
-                await app.send_voice(target_chat_id, file, reply_to_message_id=topic_id)
-            elif msg.sticker:
-                await app.send_sticker(target_chat_id, msg.sticker.file_id, reply_to_message_id=topic_id)
-            
             return True
-        except Exception as e:
-            print(f"Userbot extraction failed: {e}")
-            return False
-        finally:
-            if file and os.path.exists(file):
-                os.remove(file)
-    
+        except Exception as fe:
+            print(f"Userbot forward fallback failed: {fe}")
+
     return False
+
+
+
+
+
+
 
 async def send_media_message(app, target_chat_id, msg, caption, topic_id, sender):
     try:
