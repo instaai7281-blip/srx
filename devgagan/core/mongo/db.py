@@ -205,4 +205,15 @@ async def set_log_channel(chat_id):
 async def get_log_channel():
     doc = await settings_db.find_one({"_id": "log_channel"})
     return doc.get("chat_id") if doc else None
+
+# Ban / Unban helpers
+async def ban_user(user_id):
+    await db.update_one({"_id": user_id}, {"$set": {"banned": True}}, upsert=True)
+
+async def unban_user(user_id):
+    await db.update_one({"_id": user_id}, {"$set": {"banned": False}}, upsert=True)
+
+async def is_user_banned(user_id):
+    x = await db.find_one({"_id": user_id})
+    return x.get("banned", False) if x else False
  

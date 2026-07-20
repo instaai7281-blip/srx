@@ -197,6 +197,17 @@ def clean_filename(text, user_tag=""):
     return text.strip()
 
 
+def strip_links_except_youtube(text: str) -> str:
+    if not text:
+        return ""
+    def link_replacer(match):
+        url = match.group(0)
+        if "youtube.com" in url.lower() or "youtu.be" in url.lower():
+            return url
+        return ""
+    return re.sub(r'https?://\S+|www\.\S+|t\.me/\S+|telegram\.me/\S+', link_replacer, text)
+
+
 def clean_text_message(text, sender=None):
     """Clean text messages - remove links, mentions, hashtags, unwanted branding."""
     if not text:
@@ -208,8 +219,8 @@ def clean_text_message(text, sender=None):
     # Remove HTML tags
     text = re.sub(r'<[^>]+>', '', text)
     
-    # Remove ALL URLs
-    text = re.sub(r'https?://\S+|www\.\S+|t\.me/\S+|telegram\.me/\S+', '', text)
+    # Remove ALL URLs except YouTube
+    text = strip_links_except_youtube(text)
     
     # Remove @mentions
     text = re.sub(r'@\w+', '', text)
@@ -1489,8 +1500,8 @@ def format_caption(original_caption, sender, custom_caption, filename=None):
     # Remove ALL @mentions
     original_caption = re.sub(r'@\w+', '', original_caption)
 
-    # Remove ALL URLs
-    original_caption = re.sub(r'https?://\S+|www\.\S+|t\.me/\S+|telegram\.me/\S+', '', original_caption)
+    # Remove ALL URLs except YouTube
+    original_caption = strip_links_except_youtube(original_caption)
 
     # Replace "Extracted/Downloaded/Uploaded By" patterns
     original_caption = re.sub(

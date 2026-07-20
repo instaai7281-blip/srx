@@ -422,4 +422,77 @@ async def refresh_users(_, message):
         f"> **Not Removed Users:**\n{not_removed_text}"
     )
     await message.reply(summary)
+
+# Admin Administration: Clear Premium, Ban, and Unban features
+from devgagan.core.mongo.db import is_user_banned, ban_user, unban_user
+
+@app.on_message(filters.command("clearpremium") & filters.user(OWNER_ID))
+async def clear_all_premium_cmd(client, message):
+    try:
+        await plans_db.db.delete_many({})
+        await message.reply_text("✅ **All premium users have been successfully removed from the database.**")
+    except Exception as e:
+        await message.reply_text(f"❌ **Failed to clear premium users:** `{e}`")
+
+@app.on_message(filters.command("ban") & filters.user(OWNER_ID))
+async def ban_user_cmd(client, message):
+    if len(message.command) == 2:
+        try:
+            user_id = int(message.command[1])
+        except ValueError:
+            await message.reply_text("❌ **Invalid user ID.** Please provide a numeric ID.")
+            return
+        
+        await ban_user(user_id)
+        # Also remove premium and clean token sessions for security
+        await plans_db.remove_premium(user_id)
+        try:
+            from motor.motor_asyncio import AsyncIOMotorClient
+            from config import MONGO_DB
+            tclient = AsyncIOMotorClient(MONGO_DB)
+            tdb = tclient["telegram_bot"]
+            await tdb["tokens"].delete_one({"user_id": user_id})
+        except Exception:
+            pass
+
+        await message.reply_text(f"🚫 **User {user_id} has been banned from the bot.**")
+    else:
+        await message.reply_text("Usage: `/ban user_id`")
+
+@app.on_message(filters.command("unban") & filters.user(OWNER_ID))
+async def unban_user_cmd(client, message):
+    if len(message.command) == 2:
+        try:
+            user_id = int(message.command[1])
+        except ValueError:
+            await message.reply_text("❌ **Invalid user ID.** Please provide a numeric ID.")
+            return
+        
+        await unban_user(user_id)
+        await message.reply_text(f"✅ **User {user_id} has been unbanned successfully.**")
+    else:
+        await message.reply_text("Usage: `/unban user_id`")
+
+# Intercept all incoming messages from banned users at group -1 priority
+@app.on_message(group=-1)
+async def check_banned_user(client, message):
+    user_id = message.from_user.id if message.from_user else None
+    if not user_id:
+        return
+    # Exclude OWNER_ID from ban checks
+    if user_id in OWNER_ID:
+        return
+    if await is_user_banned(user_id):
+        await message.reply_text("❌ **You are banned from using this bot.**\n\n💬 Please contact the admin to unban.")
+        message.stop_propagation()
+
+# Intercept all incoming callback queries from banned users at group -1 priority
+@app.on_callback_query(group=-1)
+async def check_banned_user_callback(client, query):
+    user_id = query.from_user.id
+    if user_id in OWNER_ID:
+        return
+    if await is_user_banned(user_id):
+        await query.answer("❌ You are banned from using this bot. Contact admin to unban.", show_alert=True)
+        query.stop_propagation()
     
