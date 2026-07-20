@@ -754,12 +754,20 @@ async def get_msg(userbot: TelegramClient, sender: int, edit_id: int, msg_link: 
             )
             return
 
-        # Check if Direct Forward is enabled for public links
+        # Try server-side copy/forward directly for all public channel links without download/upload
         is_private = 't.me/c/' in msg_link or 't.me/b/' in msg_link or 'tg://openmessage' in msg_link
-        is_direct_forward_enabled = get_user_forward_preference(sender)
         
-        if not is_private and is_direct_forward_enabled:
-            edit = await app.edit_message_text(sender, edit_id, "Directly forwarding post... 🚀")
+        if not is_private:
+            edit = await app.edit_message_text(sender, edit_id, "Public link detected, copying directly... ⚡")
+            copy_success = await copy_message_with_chat_id(app, userbot, sender, chat, msg_id, edit)
+            if copy_success:
+                try:
+                    await edit.delete()
+                except Exception:
+                    pass
+                return
+            
+            # If clean copy fails, fallback to direct forward (keeps forwarded tag but works instantly)
             try:
                 client_to_use = userbot if userbot else app
                 chat_resolved = chat
@@ -781,13 +789,15 @@ async def get_msg(userbot: TelegramClient, sender: int, edit_id: int, msg_link: 
                     message_ids=msg_id,
                     reply_to_message_id=topic_id
                 )
-                await edit.delete(2)
+                try:
+                    await edit.delete()
+                except Exception:
+                    pass
                 return
             except Exception as forward_err:
                 print(f"Direct forward failed: {forward_err}")
 
         # Determine if we should try a fast copy or force download
-        is_private = 't.me/c/' in msg_link or 't.me/b/' in msg_link or 'tg://openmessage' in msg_link
         force_extraction = thumbnail(sender) or get_user_rename_preference(sender) != '⚝'
 
         # Set initial status message if not already set (e.g. by story/private link logic above)
@@ -799,11 +809,14 @@ async def get_msg(userbot: TelegramClient, sender: int, edit_id: int, msg_link: 
                 status_text = "Custom settings detected, extracting... ⚡"
             edit = await app.edit_message_text(sender, edit_id, status_text)
 
-        # Fast copy path without custom settings
+        # Fast copy path without custom settings (only for private links, since public links are already handled above)
         if not force_extraction:
             copy_success = await copy_message_with_chat_id(app, userbot, sender, chat, msg_id, edit)
             if copy_success:
-                await edit.delete(2)
+                try:
+                    await edit.delete()
+                except Exception:
+                    pass
                 return
             # If copy fails, fallback to extraction logic below
             await edit.edit("**Copy failed, trying extraction...**")

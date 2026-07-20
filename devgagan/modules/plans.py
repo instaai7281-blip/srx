@@ -473,26 +473,60 @@ async def unban_user_cmd(client, message):
     else:
         await message.reply_text("Usage: `/unban user_id`")
 
-# Intercept all incoming messages from banned users at group -1 priority
+# Intercept all incoming messages from banned or non-premium users at group -1 priority
 @app.on_message(group=-1)
-async def check_banned_user(client, message):
+async def check_user_access(client, message):
     user_id = message.from_user.id if message.from_user else None
     if not user_id:
         return
-    # Exclude OWNER_ID from ban checks
+    # Exclude OWNER_ID from restrictions
     if user_id in OWNER_ID:
         return
+    
+    # 1. Ban Check
     if await is_user_banned(user_id):
         await message.reply_text("❌ **You are banned from using this bot.**\n\n💬 Please contact the admin to unban.")
         message.stop_propagation()
+        return
 
-# Intercept all incoming callback queries from banned users at group -1 priority
+    # 2. Premium Check
+    is_premium = False
+    try:
+        data = await check_premium(user_id)
+        if data and data.get("expire_date"):
+            import datetime
+            if data.get("expire_date") > datetime.datetime.now():
+                is_premium = True
+    except Exception:
+        pass
+
+    if not is_premium:
+        message.stop_propagation()
+
+# Intercept all incoming callback queries from banned or non-premium users at group -1 priority
 @app.on_callback_query(group=-1)
-async def check_banned_user_callback(client, query):
+async def check_user_access_callback(client, query):
     user_id = query.from_user.id
     if user_id in OWNER_ID:
         return
+    
+    # 1. Ban Check
     if await is_user_banned(user_id):
         await query.answer("❌ You are banned from using this bot. Contact admin to unban.", show_alert=True)
+        query.stop_propagation()
+        return
+
+    # 2. Premium Check
+    is_premium = False
+    try:
+        data = await check_premium(user_id)
+        if data and data.get("expire_date"):
+            import datetime
+            if data.get("expire_date") > datetime.datetime.now():
+                is_premium = True
+    except Exception:
+        pass
+
+    if not is_premium:
         query.stop_propagation()
     
