@@ -758,10 +758,10 @@ async def get_msg(userbot: TelegramClient, sender: int, edit_id: int, msg_link: 
         is_private = 't.me/c/' in msg_link or 't.me/b/' in msg_link or 'tg://openmessage' in msg_link
         
         if not is_private:
-            # ── PUBLIC CHANNEL: ALWAYS use server-side copy or forward. NEVER download. ──
+            # ── PUBLIC CHANNEL: ALWAYS server-side copy/forward. NEVER download. ──
             edit = await app.edit_message_text(sender, edit_id, "⚡ Forwarding directly...")
             
-            # Resolve target chat
+            # Resolve target chat (where to send)
             _pub_target = get_target_chat_id(sender)
             _pub_topic = None
             if '/' in str(_pub_target):
@@ -772,41 +772,44 @@ async def get_msg(userbot: TelegramClient, sender: int, edit_id: int, msg_link: 
                 except (ValueError, TypeError):
                     pass
 
-            # ── CRITICAL: Resolve source peer first (so Telegram knows this chat) ──
-            _chat_resolved = chat  # may be a username string
-            try:
-                # This call tells Pyrogram/Telegram to cache the peer info for this username
-                _chat_info = await app.get_chat(chat)
-                _chat_resolved = _chat_info.id  # numeric ID
-            except Exception as _resolve_err:
-                print(f"[PUBLIC] peer resolve via app failed: {_resolve_err}")
-                # Try userbot resolve
-                if userbot:
-                    try:
-                        _ent = await userbot.get_entity(chat)
-                        _chat_resolved = _ent.id
-                    except Exception as _ub_resolve_err:
-                        print(f"[PUBLIC] peer resolve via userbot failed: {_ub_resolve_err}")
+            # ── Resolve source peer using raw Telegram API (most reliable) ──
+            # Pyrogram needs @username format OR raw ResolveUsername call
+            _chat_resolved = chat
+            _username = chat if chat.startswith("@") else f"@{chat}" if isinstance(chat, str) and not str(chat).lstrip('-').isdigit() else chat
 
-            # Also resolve target peer to make sure it's cached
             try:
-                await app.get_chat(_pub_target)
-            except Exception:
-                pass
+                from pyrogram import raw as _raw
+                _r = await app.invoke(_raw.functions.contacts.ResolveUsername(username=chat.lstrip("@")))
+                if _r.chats:
+                    _chat_resolved = int("-100" + str(_r.chats[0].id)) if not str(_r.chats[0].id).startswith("-") else _r.chats[0].id
+                elif _r.users:
+                    _chat_resolved = _r.users[0].id
+                print(f"[PUBLIC] resolved {chat} → {_chat_resolved}")
+            except Exception as _raw_err:
+                print(f"[PUBLIC] raw resolve failed: {_raw_err}")
+                # Fallback: try with @ prefix
+                try:
+                    _chat_info = await app.get_chat(_username)
+                    _chat_resolved = _chat_info.id
+                except Exception as _get_err:
+                    print(f"[PUBLIC] get_chat failed: {_get_err}")
+                    # Try userbot (also Pyrogram)
+                    if userbot:
+                        try:
+                            _ub_info = await userbot.get_chat(_username)
+                            _chat_resolved = _ub_info.id
+                        except Exception as _ub_err:
+                            print(f"[PUBLIC] userbot get_chat failed: {_ub_err}")
 
-            # ── Step 1: app.copy_message with custom caption (cleanest, no download) ──
+            # ── Step 1: app.copy_message with clean caption + branding tag ──
             try:
                 _src_msg = await app.get_messages(_chat_resolved, msg_id)
                 if _src_msg and not _src_msg.empty:
                     _raw_cap = str(_src_msg.caption or '')
                     _clean_cap = strip_links_except_youtube(clean_surrogates(_raw_cap))
                     _branding = get_user_branding_tag(sender)
-                    if _clean_cap.strip():
-                        _final_cap = f"{_clean_cap.strip()}\n\n> **{_branding}**"
-                    else:
-                        _final_cap = f"> **{_branding}**"
+                    _final_cap = (f"{_clean_cap.strip()}\n\n> **{_branding}**" if _clean_cap.strip() else f"> **{_branding}**")
                     _final_cap_html = format_caption_to_html(clean_surrogates(_final_cap))
-                    
                     _result = await app.copy_message(
                         chat_id=_pub_target,
                         from_chat_id=_chat_resolved,
@@ -824,7 +827,7 @@ async def get_msg(userbot: TelegramClient, sender: int, edit_id: int, msg_link: 
             except Exception as _copy_err:
                 print(f"[PUBLIC] copy_message failed: {_copy_err}")
 
-            # ── Step 2: app.forward_messages fallback (still server-side, instant) ──
+            # ── Step 2: app.forward_messages fallback ──
             try:
                 await app.forward_messages(
                     chat_id=_pub_target,
@@ -840,24 +843,23 @@ async def get_msg(userbot: TelegramClient, sender: int, edit_id: int, msg_link: 
             except Exception as _fwd_err:
                 print(f"[PUBLIC] forward_messages failed: {_fwd_err}")
 
-            # ── Step 3: userbot forward fallback ──
+            # ── Step 3: userbot forward (also Pyrogram) ──
             if userbot:
                 try:
-                    # Use already-resolved numeric ID if available
-                    _ub_src = _chat_resolved if isinstance(_chat_resolved, int) else chat
+                    # Resolve on userbot side too
+                    _ub_src = _chat_resolved
                     if not isinstance(_ub_src, int):
                         try:
-                            _ub_src = (await userbot.get_entity(_ub_src)).id
+                            _ub_info = await userbot.get_chat(_username)
+                            _ub_src = _ub_info.id
                         except Exception:
                             pass
-                    # Resolve userbot target too
-                    _ub_tgt = _pub_target
-                    try:
-                        _ub_tgt_ent = await userbot.get_entity(_pub_target)
-                        _ub_tgt = _ub_tgt_ent.id
-                    except Exception:
-                        pass
-                    await userbot.forward_messages(_ub_tgt, msg_id, _ub_src)
+                    await userbot.forward_messages(
+                        chat_id=_pub_target,
+                        from_chat_id=_ub_src,
+                        message_ids=msg_id,
+                        drop_author=True,
+                    )
                     try:
                         await edit.delete()
                     except Exception:
@@ -866,9 +868,10 @@ async def get_msg(userbot: TelegramClient, sender: int, edit_id: int, msg_link: 
                 except Exception as _ub_err:
                     print(f"[PUBLIC] userbot forward failed: {_ub_err}")
 
-            # All server-side methods failed — do NOT download. Show error and stop.
-            await edit.edit("❌ **Could not copy this message.**\n\nThe bot could not resolve or access this channel. Make sure the channel username is correct and the channel is public.")
+            # All server-side methods failed — show error, do NOT download.
+            await edit.edit("❌ **Could not copy this message.**\n\nCould not resolve the channel. Make sure the channel is public and the link is correct.")
             return
+
 
 
         # Determine if we should try a fast copy or force download
