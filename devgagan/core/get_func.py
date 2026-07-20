@@ -754,48 +754,92 @@ async def get_msg(userbot: TelegramClient, sender: int, edit_id: int, msg_link: 
             )
             return
 
-        # Try server-side copy/forward directly for all public channel links without download/upload
+        # Detect if it's a private channel link
         is_private = 't.me/c/' in msg_link or 't.me/b/' in msg_link or 'tg://openmessage' in msg_link
         
         if not is_private:
-            edit = await app.edit_message_text(sender, edit_id, "Public link detected, copying directly... ⚡")
-            copy_success = await copy_message_with_chat_id(app, userbot, sender, chat, msg_id, edit)
-            if copy_success:
-                try:
-                    await edit.delete()
-                except Exception:
-                    pass
-                return
+            # ── PUBLIC CHANNEL: ALWAYS use server-side copy or forward. NEVER download. ──
+            edit = await app.edit_message_text(sender, edit_id, "⚡ Forwarding directly...")
             
-            # If clean copy fails, fallback to direct forward (keeps forwarded tag but works instantly)
+            # Resolve target
+            _pub_target = get_target_chat_id(sender)
+            _pub_topic = None
+            if '/' in str(_pub_target):
+                _pub_target, _pub_topic = map(int, str(_pub_target).split('/', 1))
+            else:
+                try:
+                    _pub_target = int(_pub_target)
+                except (ValueError, TypeError):
+                    pass
+
+            # ── Step 1: app.copy_message with custom caption (cleanest) ──
             try:
-                client_to_use = userbot if userbot else app
-                chat_resolved = chat
-                if isinstance(chat, str) and not chat.startswith("-") and not chat.isdigit():
-                    try:
-                        chat_entity = await client_to_use.get_chat(chat)
-                        chat_resolved = chat_entity.id
-                    except Exception:
-                        pass
-                
-                target_chat_id = get_target_chat_id(sender)
-                topic_id = None
-                if '/' in str(target_chat_id):
-                    target_chat_id, topic_id = map(int, target_chat_id.split('/', 1))
-                
-                await client_to_use.forward_messages(
-                    chat_id=target_chat_id,
-                    from_chat_id=chat_resolved,
+                # Build caption with branding tag
+                _src_msg = await app.get_messages(chat, msg_id)
+                if _src_msg and not _src_msg.empty:
+                    _raw_cap = str(_src_msg.caption or '')
+                    _clean_cap = strip_links_except_youtube(clean_surrogates(_raw_cap))
+                    _branding = get_user_branding_tag(sender)
+                    if _clean_cap.strip():
+                        _final_cap = f"{_clean_cap.strip()}\n\n> **{_branding}**"
+                    else:
+                        _final_cap = f"> **{_branding}**"
+                    _final_cap_html = format_caption_to_html(clean_surrogates(_final_cap))
+                    
+                    _result = await app.copy_message(
+                        chat_id=_pub_target,
+                        from_chat_id=chat,
+                        message_id=msg_id,
+                        caption=_final_cap_html,
+                        parse_mode=ParseMode.HTML,
+                        reply_to_message_id=_pub_topic,
+                    )
+                    if _result:
+                        try:
+                            await edit.delete()
+                        except Exception:
+                            pass
+                        return
+            except Exception as _copy_err:
+                print(f"[PUBLIC] copy_message failed: {_copy_err}")
+
+            # ── Step 2: app.forward_messages fallback (still server-side, instant) ──
+            try:
+                await app.forward_messages(
+                    chat_id=_pub_target,
+                    from_chat_id=chat,
                     message_ids=msg_id,
-                    reply_to_message_id=topic_id
+                    drop_author=True,
                 )
                 try:
                     await edit.delete()
                 except Exception:
                     pass
                 return
-            except Exception as forward_err:
-                print(f"Direct forward failed: {forward_err}")
+            except Exception as _fwd_err:
+                print(f"[PUBLIC] forward_messages failed: {_fwd_err}")
+
+            # ── Step 3: userbot forward fallback ──
+            if userbot:
+                try:
+                    _chat_res = chat
+                    if isinstance(chat, str) and not chat.startswith("-") and not chat.isdigit():
+                        try:
+                            _chat_res = (await userbot.get_entity(chat)).id
+                        except Exception:
+                            pass
+                    await userbot.forward_messages(_pub_target, msg_id, _chat_res)
+                    try:
+                        await edit.delete()
+                    except Exception:
+                        pass
+                    return
+                except Exception as _ub_err:
+                    print(f"[PUBLIC] userbot forward failed: {_ub_err}")
+
+            # All server-side methods failed — do NOT download. Show error and stop.
+            await edit.edit("❌ **Could not copy this message.** The bot may not have access to this channel. Try adding the bot as a member of the source channel.")
+            return
 
         # Determine if we should try a fast copy or force download
         force_extraction = thumbnail(sender) or get_user_rename_preference(sender) != '⚝'
@@ -1189,16 +1233,20 @@ async def download_user_stories(userbot, chat_id, msg_id, edit, sender):
         await edit.edit(f"Error: {e}")
         
 async def copy_message_with_chat_id(app, userbot, sender, chat_id, message_id, edit):
+    """Used for PRIVATE channel links. Tries server-side copy, then userbot forward. Returns True on success."""
     target_chat_id = get_target_chat_id(sender)
-    result = None
 
     try:
         topic_id = None
         if '/' in str(target_chat_id):
             target_chat_id, topic_id = map(int, str(target_chat_id).split('/', 1))
+        else:
+            try:
+                target_chat_id = int(target_chat_id)
+            except (ValueError, TypeError):
+                pass
 
-        # Try to get message first to check protections and filters
-        client_to_use = app
+        # Get message to check filters and protected content
         msg = None
         try:
             msg = await app.get_messages(chat_id, message_id)
@@ -1207,16 +1255,13 @@ async def copy_message_with_chat_id(app, userbot, sender, chat_id, message_id, e
         except Exception:
             if userbot:
                 try:
-                    if isinstance(chat_id, str) and not chat_id.startswith("-") and not chat_id.isdigit():
+                    _cid = chat_id
+                    if isinstance(_cid, str) and not _cid.startswith("-") and not _cid.isdigit():
                         try:
-                            ent = await userbot.get_entity(chat_id)
-                            chat_id = ent.id
+                            _cid = (await userbot.get_entity(_cid)).id
                         except Exception:
                             pass
-                    from telethon.tl.functions.messages import GetMessagesRequest
-                    result_tl = await userbot.get_messages(chat_id, ids=message_id)
-                    if result_tl:
-                        msg = result_tl
+                    msg = await userbot.get_messages(_cid, ids=message_id)
                 except Exception:
                     pass
 
@@ -1224,54 +1269,44 @@ async def copy_message_with_chat_id(app, userbot, sender, chat_id, message_id, e
             return False
 
         # Apply filter checks
-        if hasattr(msg, 'media') and msg.media:
-            media = msg.media
-            if hasattr(media, 'video') and media.video and not await is_enabled(sender, "video"):
-                return True
-            if hasattr(msg, 'document') and msg.document and not await is_enabled(sender, "document"):
-                return True
-            if hasattr(msg, 'photo') and msg.photo and not await is_enabled(sender, "photo"):
-                return True
-            if hasattr(msg, 'audio') and msg.audio and not await is_enabled(sender, "audio"):
-                return True
-            if hasattr(msg, 'sticker') and msg.sticker and not await is_enabled(sender, "sticker"):
-                return True
-        elif hasattr(msg, 'text') and msg.text and not await is_enabled(sender, "text"):
+        if hasattr(msg, 'video') and msg.video and not await is_enabled(sender, "video"):
             return True
+        if hasattr(msg, 'document') and msg.document and not await is_enabled(sender, "document"):
+            return True
+        if hasattr(msg, 'photo') and msg.photo and not await is_enabled(sender, "photo"):
+            return True
+        if hasattr(msg, 'audio') and msg.audio and not await is_enabled(sender, "audio"):
+            return True
+        if hasattr(msg, 'sticker') and msg.sticker and not await is_enabled(sender, "sticker"):
+            return True
+        if (not (hasattr(msg, 'media') and msg.media)) and hasattr(msg, 'text') and msg.text:
+            if not await is_enabled(sender, "text"):
+                return True
 
-        # Protected content — cannot copy
+        # Protected content — cannot server-copy, must download
         if hasattr(msg, 'has_protected_content') and msg.has_protected_content:
             return False
 
-        # Build our custom caption using the branding tag
-        branding_tag = get_user_branding_tag(sender)
-        custom_caption = get_user_caption_preference(sender)
-        filename = await get_media_filename(msg)
+        # Build caption with branding tag
         _raw_cap = ''
         if hasattr(msg, 'caption') and msg.caption:
             _raw_cap = str(msg.caption)
         elif hasattr(msg, 'message') and msg.message:
             _raw_cap = str(msg.message)
-
-        _clean_cap = clean_surrogates(_raw_cap)
-
-        if get_user_keep_original_caption(sender) and _clean_cap:
-            final_caption = _clean_cap
-        elif custom_caption:
-            final_caption = apply_custom_caption_placeholders(custom_caption, _clean_cap, filename)
+        _clean_cap = strip_links_except_youtube(clean_surrogates(_raw_cap))
+        _branding = get_user_branding_tag(sender)
+        if _clean_cap.strip():
+            _final_cap = f"{_clean_cap.strip()}\n\n> **{_branding}**"
         else:
-            final_caption = format_caption(_clean_cap, sender, None, filename=filename)
+            _final_cap = f"> **{_branding}**"
+        _final_cap_html = format_caption_to_html(clean_surrogates(_final_cap))
 
-        final_caption_html = format_caption_to_html(clean_surrogates(final_caption)) if final_caption else None
-
-        # ── SERVER-SIDE copy_message (NO download) ──
-        # Pyrogram's copy_message reuses the file_reference from the source message
-        # and creates a new message on Telegram's side — zero bytes transferred locally.
+        # Try server-side copy_message
         result = await app.copy_message(
             chat_id=target_chat_id,
             from_chat_id=chat_id,
             message_id=message_id,
-            caption=final_caption_html,
+            caption=_final_cap_html,
             parse_mode=ParseMode.HTML,
             reply_to_message_id=topic_id,
         )
@@ -1279,35 +1314,30 @@ async def copy_message_with_chat_id(app, userbot, sender, chat_id, message_id, e
             return True
 
     except Exception as e:
-        print(f"Server-side copy failed: {e}")
+        print(f"[COPY] server-side copy failed: {e}")
 
-    # Fallback: try userbot forward (instant, no download)
+    # Fallback: userbot forward (server-side, no download)
     if userbot:
         try:
+            _cid_res = chat_id
             if isinstance(chat_id, str) and not chat_id.startswith("-") and not chat_id.isdigit():
                 try:
-                    ent = await userbot.get_entity(chat_id)
-                    chat_id_resolved = ent.id
+                    _cid_res = (await userbot.get_entity(chat_id)).id
                 except Exception:
-                    chat_id_resolved = chat_id
+                    pass
+            _tgt = get_target_chat_id(sender)
+            _tid = None
+            if '/' in str(_tgt):
+                _tgt, _tid = map(int, str(_tgt).split('/', 1))
             else:
-                chat_id_resolved = chat_id
-
-            _topic_id = None
-            _target = get_target_chat_id(sender)
-            if '/' in str(_target):
-                _target, _topic_id = map(int, str(_target).split('/', 1))
-            else:
-                _target = int(_target) if str(_target).lstrip('-').isdigit() else _target
-
-            await userbot.forward_messages(
-                _target,
-                message_id,
-                chat_id_resolved,
-            )
+                try:
+                    _tgt = int(_tgt)
+                except (ValueError, TypeError):
+                    pass
+            await userbot.forward_messages(_tgt, message_id, _cid_res)
             return True
         except Exception as fe:
-            print(f"Userbot forward fallback failed: {fe}")
+            print(f"[COPY] userbot forward failed: {fe}")
 
     return False
 
