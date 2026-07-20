@@ -761,7 +761,7 @@ async def get_msg(userbot: TelegramClient, sender: int, edit_id: int, msg_link: 
             # ── PUBLIC CHANNEL: ALWAYS use server-side copy or forward. NEVER download. ──
             edit = await app.edit_message_text(sender, edit_id, "⚡ Forwarding directly...")
             
-            # Resolve target
+            # Resolve target chat
             _pub_target = get_target_chat_id(sender)
             _pub_topic = None
             if '/' in str(_pub_target):
@@ -772,10 +772,31 @@ async def get_msg(userbot: TelegramClient, sender: int, edit_id: int, msg_link: 
                 except (ValueError, TypeError):
                     pass
 
-            # ── Step 1: app.copy_message with custom caption (cleanest) ──
+            # ── CRITICAL: Resolve source peer first (so Telegram knows this chat) ──
+            _chat_resolved = chat  # may be a username string
             try:
-                # Build caption with branding tag
-                _src_msg = await app.get_messages(chat, msg_id)
+                # This call tells Pyrogram/Telegram to cache the peer info for this username
+                _chat_info = await app.get_chat(chat)
+                _chat_resolved = _chat_info.id  # numeric ID
+            except Exception as _resolve_err:
+                print(f"[PUBLIC] peer resolve via app failed: {_resolve_err}")
+                # Try userbot resolve
+                if userbot:
+                    try:
+                        _ent = await userbot.get_entity(chat)
+                        _chat_resolved = _ent.id
+                    except Exception as _ub_resolve_err:
+                        print(f"[PUBLIC] peer resolve via userbot failed: {_ub_resolve_err}")
+
+            # Also resolve target peer to make sure it's cached
+            try:
+                await app.get_chat(_pub_target)
+            except Exception:
+                pass
+
+            # ── Step 1: app.copy_message with custom caption (cleanest, no download) ──
+            try:
+                _src_msg = await app.get_messages(_chat_resolved, msg_id)
                 if _src_msg and not _src_msg.empty:
                     _raw_cap = str(_src_msg.caption or '')
                     _clean_cap = strip_links_except_youtube(clean_surrogates(_raw_cap))
@@ -788,7 +809,7 @@ async def get_msg(userbot: TelegramClient, sender: int, edit_id: int, msg_link: 
                     
                     _result = await app.copy_message(
                         chat_id=_pub_target,
-                        from_chat_id=chat,
+                        from_chat_id=_chat_resolved,
                         message_id=msg_id,
                         caption=_final_cap_html,
                         parse_mode=ParseMode.HTML,
@@ -807,7 +828,7 @@ async def get_msg(userbot: TelegramClient, sender: int, edit_id: int, msg_link: 
             try:
                 await app.forward_messages(
                     chat_id=_pub_target,
-                    from_chat_id=chat,
+                    from_chat_id=_chat_resolved,
                     message_ids=msg_id,
                     drop_author=True,
                 )
@@ -822,13 +843,21 @@ async def get_msg(userbot: TelegramClient, sender: int, edit_id: int, msg_link: 
             # ── Step 3: userbot forward fallback ──
             if userbot:
                 try:
-                    _chat_res = chat
-                    if isinstance(chat, str) and not chat.startswith("-") and not chat.isdigit():
+                    # Use already-resolved numeric ID if available
+                    _ub_src = _chat_resolved if isinstance(_chat_resolved, int) else chat
+                    if not isinstance(_ub_src, int):
                         try:
-                            _chat_res = (await userbot.get_entity(chat)).id
+                            _ub_src = (await userbot.get_entity(_ub_src)).id
                         except Exception:
                             pass
-                    await userbot.forward_messages(_pub_target, msg_id, _chat_res)
+                    # Resolve userbot target too
+                    _ub_tgt = _pub_target
+                    try:
+                        _ub_tgt_ent = await userbot.get_entity(_pub_target)
+                        _ub_tgt = _ub_tgt_ent.id
+                    except Exception:
+                        pass
+                    await userbot.forward_messages(_ub_tgt, msg_id, _ub_src)
                     try:
                         await edit.delete()
                     except Exception:
@@ -838,8 +867,9 @@ async def get_msg(userbot: TelegramClient, sender: int, edit_id: int, msg_link: 
                     print(f"[PUBLIC] userbot forward failed: {_ub_err}")
 
             # All server-side methods failed — do NOT download. Show error and stop.
-            await edit.edit("❌ **Could not copy this message.** The bot may not have access to this channel. Try adding the bot as a member of the source channel.")
+            await edit.edit("❌ **Could not copy this message.**\n\nThe bot could not resolve or access this channel. Make sure the channel username is correct and the channel is public.")
             return
+
 
         # Determine if we should try a fast copy or force download
         force_extraction = thumbnail(sender) or get_user_rename_preference(sender) != '⚝'
